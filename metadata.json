@@ -1,0 +1,7 @@
+{
+  "name": "FinFlow AI - Personal Finance",
+  "description": "A modern, AI-powered personal finance application specialized in credit card management and spending optimization.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
