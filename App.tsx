@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import Transactions from './components/Transactions';
@@ -6,34 +6,46 @@ import CardsView from './components/CardsView';
 import AIAssistant from './components/AIAssistant';
 import Goals from './components/Goals';
 import Reports from './components/Reports';
-import { Transaction, Category, CreditCard, Goal } from './types';
-import { MOCK_TRANSACTIONS, MOCK_CATEGORIES, MOCK_CARDS, MOCK_GOALS } from './constants';
+import LoginScreen from './components/LoginScreen';
+import { Transaction, Goal } from './types';
+import { useFinanceData } from './hooks/useFinanceData';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   
-  // Global State
-  const [transactions, setTransactions] = useState<Transaction[]>(MOCK_TRANSACTIONS);
-  const [categories] = useState<Category[]>(MOCK_CATEGORIES);
-  const [cards] = useState<CreditCard[]>(MOCK_CARDS);
-  const [goals, setGoals] = useState<Goal[]>(MOCK_GOALS);
+  // Custom Hook for Data Persistence
+  const { 
+    user, 
+    login, 
+    logout, 
+    resetData,
+    transactions, 
+    categories, 
+    cards, 
+    goals, 
+    addTransaction, 
+    addGoal 
+  } = useFinanceData();
 
   const handleAddTransaction = (newTransaction: Partial<Transaction>) => {
-    // In a real app, this would validate full data or fetch ID from backend
     const t = {
         ...newTransaction,
         id: Date.now().toString(),
-        categoryId: newTransaction.categoryId || categories[0].id, // Default fallback
+        categoryId: newTransaction.categoryId || categories[0].id,
         type: newTransaction.type || 'EXPENSE',
     } as Transaction;
     
-    setTransactions(prev => [t, ...prev]);
+    addTransaction(t);
   };
 
   const handleAddGoal = (newGoal: Goal) => {
-     setGoals(prev => [...prev, newGoal]);
+     addGoal(newGoal);
   };
+
+  if (!user) {
+    return <LoginScreen onLogin={login} />;
+  }
 
   const renderContent = () => {
     switch(activeTab) {
@@ -69,6 +81,7 @@ const App: React.FC = () => {
         setActiveTab={setActiveTab}
         isMobileOpen={isMobileOpen}
         setIsMobileOpen={setIsMobileOpen}
+        onLogout={logout}
       />
       
       <main className="flex-1 flex flex-col h-full relative overflow-hidden">
@@ -81,7 +94,7 @@ const App: React.FC = () => {
             <span className="font-bold text-slate-800 ml-3">Goat Fin</span>
           </div>
           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center text-white font-bold text-xs">
-             US
+             {user.name.substring(0, 2).toUpperCase()}
           </div>
         </div>
 
@@ -89,8 +102,20 @@ const App: React.FC = () => {
         <div className="flex-1 overflow-y-auto p-4 lg:p-8 scroll-smooth">
           <div className="max-w-6xl mx-auto">
             <div className="mb-6 flex justify-between items-end">
-               <h1 className="text-2xl font-bold text-slate-800 capitalize">{activeTab === 'ai' ? 'Assistente AI' : activeTab}</h1>
-               <span className="text-sm text-slate-400 hidden sm:block">Hoje, {new Date().toLocaleDateString('pt-BR')}</span>
+               <div>
+                 <h1 className="text-2xl font-bold text-slate-800 capitalize">{activeTab === 'ai' ? 'Assistente AI' : activeTab}</h1>
+                 <p className="text-slate-500 text-sm">Olá, {user.name} 👋</p>
+               </div>
+               <div className="flex items-center gap-3">
+                 <span className="text-sm text-slate-400 hidden sm:block">{new Date().toLocaleDateString('pt-BR')}</span>
+                 <button 
+                   onClick={resetData}
+                   className="text-xs text-red-500 hover:text-red-700 underline"
+                   title="Apagar todos os dados e começar do zero"
+                 >
+                   Resetar Dados
+                 </button>
+               </div>
             </div>
             {renderContent()}
           </div>
