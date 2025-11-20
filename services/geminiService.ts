@@ -2,7 +2,14 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { Transaction, CreditCard, Category } from "../types";
 
 // The API key must be obtained exclusively from the environment variable process.env.API_KEY.
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+const getClient = () => {
+  const apiKey = process.env.API_KEY;
+  if (!apiKey) {
+    console.warn("Google GenAI API Key is missing. AI features will be disabled.");
+    return null;
+  }
+  return new GoogleGenAI({ apiKey });
+};
 
 export const getFinancialAdvice = async (
   transactions: Transaction[],
@@ -16,6 +23,9 @@ export const getFinancialAdvice = async (
   });
 
   try {
+    const ai = getClient();
+    if (!ai) return [];
+
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
       contents: `Analyze this financial data and provide 3 actionable tips to save money or optimize spending. 
@@ -48,6 +58,9 @@ export const getFinancialAdvice = async (
 
 export const parseReceiptImage = async (base64Image: string): Promise<Partial<Transaction> | null> => {
   try {
+    const ai = getClient();
+    if (!ai) return null;
+
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
       contents: {
@@ -58,20 +71,20 @@ export const parseReceiptImage = async (base64Image: string): Promise<Partial<Tr
       },
       config: {
         responseMimeType: "application/json",
-         responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-              description: { type: Type.STRING },
-              amount: { type: Type.NUMBER },
-              date: { type: Type.STRING },
-              category: { type: Type.STRING }
-            }
-         }
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            description: { type: Type.STRING },
+            amount: { type: Type.NUMBER },
+            date: { type: Type.STRING },
+            category: { type: Type.STRING }
+          }
+        }
       }
     });
 
     const data = JSON.parse(response.text || '{}');
-    
+
     // Basic validation
     if (data.amount && data.description) {
       return {
