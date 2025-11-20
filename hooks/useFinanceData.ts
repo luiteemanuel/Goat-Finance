@@ -126,6 +126,24 @@ export const useFinanceData = () => {
     });
   };
 
+  const addCard = async (c: CreditCard) => {
+    setCards(prev => [...prev, c]);
+    const { data, error } = await supabase.from('cards').insert({
+      name: c.name,
+      limit_amount: c.limit,
+      color: c.color,
+      due_date: c.dueDay,
+      closing_date: c.closingDay,
+      user_id: (await supabase.auth.getUser()).data.user?.id
+    }).select().single();
+
+    if (error) {
+      console.error('Error adding card:', error);
+    } else if (data) {
+      setCards(prev => prev.map(item => item.id === c.id ? { ...item, id: data.id } : item));
+    }
+  };
+
   return {
     user,
     login,
@@ -137,6 +155,7 @@ export const useFinanceData = () => {
     goals,
     addTransaction,
     addGoal,
+    addCard,
     isLoaded: !loading
   };
 };
