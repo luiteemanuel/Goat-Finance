@@ -50,8 +50,8 @@ const LoginScreen: React.FC<LoginScreenProps> = () => {
     <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
       <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md animate-fade-in">
         <div className="text-center mb-8">
-          <div className="w-20 h-20 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl mx-auto flex items-center justify-center mb-4 shadow-lg transform rotate-3 hover:rotate-6 transition-transform duration-300">
-            <img src="/goat-logo.png" alt="Goat Logo" className="w-12 h-12 object-contain drop-shadow-md" />
+          <div className="w-24 h-24 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl mx-auto flex items-center justify-center mb-4 shadow-lg transform rotate-3 hover:rotate-6 transition-transform duration-300">
+            <img src="/goat-icon.png" alt="Goat Logo" className="w-16 h-16 object-contain drop-shadow-md" />
           </div>
           <h1 className="text-3xl font-bold text-slate-800">Goat Finance</h1>
           <p className="text-slate-500 mt-2">{isSignUp ? 'Crie sua conta gratuita' : 'Entre para acessar suas finanças'}</p>

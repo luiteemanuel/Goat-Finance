@@ -73,12 +73,12 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions, categories, cards }
       {/* Stylish Header */}
       <div className="bg-gradient-to-r from-slate-800 to-slate-900 rounded-2xl p-8 text-white shadow-lg relative overflow-hidden">
         <div className="absolute -right-6 -top-6 opacity-10 transform rotate-12">
-          <i className="fa-solid fa-goat text-9xl"></i>
+          <img src="/goat-icon.png" alt="Goat Logo" className="w-48 h-48 object-contain grayscale invert" />
         </div>
         <div className="relative z-10">
           <h2 className="text-3xl font-bold mb-2 flex items-center gap-3">
-            <div className="w-10 h-10 bg-indigo-500 rounded-lg flex items-center justify-center shadow-lg shadow-indigo-500/30">
-              <i className="fa-solid fa-goat text-white text-lg"></i>
+            <div className="w-12 h-12 bg-indigo-500/20 backdrop-blur-sm rounded-xl flex items-center justify-center border border-indigo-500/30">
+              <img src="/goat-icon.png" alt="Goat Logo" className="w-8 h-8 object-contain" />
             </div>
             Goat Finance
           </h2>

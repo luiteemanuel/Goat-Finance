@@ -21,7 +21,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isMobileOpen
     <>
       {/* Mobile Overlay */}
       {isMobileOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black bg-opacity-50 z-20 lg:hidden"
           onClick={() => setIsMobileOpen(false)}
         />
@@ -32,11 +32,13 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isMobileOpen
         ${isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}>
         <div className="h-full flex flex-col">
-          <div className="h-16 flex items-center px-6 border-b border-slate-100">
-            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center mr-3">
-              <i className="fa-solid fa-goat text-white text-sm"></i>
+          <div className="p-6 border-b border-slate-800/50 flex items-center gap-3">
+            <div className="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center shadow-lg shadow-indigo-500/20">
+              <img src="/goat-icon.png" alt="Goat" className="w-5 h-5 object-contain" />
             </div>
-            <span className="text-xl font-bold text-slate-800">Goat Fin</span>
+            <h1 className="text-xl font-bold bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent">
+              Goat Fin
+            </h1>
           </div>
 
           <nav className="flex-1 py-6 px-3 space-y-1">
@@ -49,8 +51,8 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isMobileOpen
                 }}
                 className={`
                   w-full flex items-center px-4 py-3 rounded-xl text-sm font-medium transition-colors
-                  ${activeTab === item.id 
-                    ? 'bg-primary/10 text-primary' 
+                  ${activeTab === item.id
+                    ? 'bg-primary/10 text-primary'
                     : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}
                 `}
               >
