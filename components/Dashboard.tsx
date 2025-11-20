@@ -6,6 +6,8 @@ interface DashboardProps {
   transactions: Transaction[];
   categories: Category[];
   cards: CreditCard[];
+  selectedMonth: string;
+  onMonthChange: (month: string) => void;
 }
 
 const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#8b5cf6', '#cbd5e1'];
@@ -17,19 +19,41 @@ const PAYMENT_COLORS: Record<string, string> = {
   [PaymentMethod.TRANSFER]: '#3b82f6',
 };
 
-const Dashboard: React.FC<DashboardProps> = ({ transactions, categories, cards }) => {
+const Dashboard: React.FC<DashboardProps> = ({ transactions, categories, cards, selectedMonth, onMonthChange }) => {
+
+  const filteredTransactions = useMemo(() => {
+    return transactions.filter(t => t.date.startsWith(selectedMonth));
+  }, [transactions, selectedMonth]);
+
+  const handlePrevMonth = () => {
+    const [year, month] = selectedMonth.split('-').map(Number);
+    const date = new Date(year, month - 2, 1); // Month is 0-indexed, so current is month-1, prev is month-2
+    onMonthChange(date.toISOString().slice(0, 7));
+  };
+
+  const handleNextMonth = () => {
+    const [year, month] = selectedMonth.split('-').map(Number);
+    const date = new Date(year, month, 1); // Current is month-1, next is month
+    onMonthChange(date.toISOString().slice(0, 7));
+  };
+
+  const formatMonth = (isoMonth: string) => {
+    const [year, month] = isoMonth.split('-').map(Number);
+    const date = new Date(year, month - 1, 1);
+    return date.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+  };
 
   const summary = useMemo(() => {
     let income = 0;
     let expense = 0;
 
-    transactions.forEach(t => {
+    filteredTransactions.forEach(t => {
       if (t.type === TransactionType.INCOME) income += t.amount;
       else expense += t.amount;
     });
 
     return { income, expense, balance: income - expense };
-  }, [transactions]);
+  }, [filteredTransactions]);
 
   const categoryData = useMemo(() => {
     const data: Record<string, number> = {};
@@ -40,7 +64,7 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions, categories, cards }
         data[catName] = (data[catName] || 0) + t.amount;
       });
     return Object.entries(data).map(([name, value]) => ({ name, value }));
-  }, [transactions, categories]);
+  }, [filteredTransactions, categories]);
 
   const paymentMethodData = useMemo(() => {
     const data: Record<string, number> = {};
@@ -50,7 +74,7 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions, categories, cards }
         data[t.paymentMethod] = (data[t.paymentMethod] || 0) + t.amount;
       });
     return Object.entries(data).map(([name, value]) => ({ name, value }));
-  }, [transactions]);
+  }, [filteredTransactions]);
 
   const cardData = useMemo(() => {
     const data: Record<string, number> = {};
@@ -61,10 +85,10 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions, categories, cards }
         data[cardName] = (data[cardName] || 0) + t.amount;
       });
     return Object.entries(data).map(([name, value]) => ({ name, value }));
-  }, [transactions, cards]);
+  }, [filteredTransactions, cards]);
 
   // Recurring Expenses logic
-  const recurringExpenses = transactions.filter(t => t.isFixed && t.type === TransactionType.EXPENSE);
+  const recurringExpenses = filteredTransactions.filter(t => t.isFixed && t.type === TransactionType.EXPENSE);
   const recurringPaid = recurringExpenses.filter(t => t.status === TransactionStatus.PAID);
   const recurringPending = recurringExpenses.filter(t => t.status === TransactionStatus.PENDING);
 
@@ -88,7 +112,19 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions, categories, cards }
         </div>
       </div>
 
-      <div className="flex justify-end">
+      <div className="flex justify-between items-center">
+        <div className="flex items-center bg-white rounded-lg p-1 border border-slate-200 shadow-sm">
+          <button onClick={handlePrevMonth} className="p-2 hover:bg-slate-50 rounded-md text-slate-600">
+            <i className="fa-solid fa-chevron-left"></i>
+          </button>
+          <span className="px-4 font-medium text-slate-700 capitalize min-w-[140px] text-center">
+            {formatMonth(selectedMonth)}
+          </span>
+          <button onClick={handleNextMonth} className="p-2 hover:bg-slate-50 rounded-md text-slate-600">
+            <i className="fa-solid fa-chevron-right"></i>
+          </button>
+        </div>
+
         <button className="text-sm text-primary font-medium hover:underline flex items-center">
           <i className="fa-solid fa-rotate mr-2"></i> Sincronizar Open Finance
         </button>
@@ -250,7 +286,7 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions, categories, cards }
         <h4 className="text-lg font-bold text-slate-800 mb-4">Alertas de Orçamento</h4>
         <div className="space-y-4">
           {categories.map(cat => {
-            const spent = transactions
+            const spent = filteredTransactions
               .filter(t => t.categoryId === cat.id && t.type === TransactionType.EXPENSE)
               .reduce((sum, t) => sum + t.amount, 0);
             const percentage = (spent / cat.budgetLimit) * 100;

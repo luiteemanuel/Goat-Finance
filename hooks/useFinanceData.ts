@@ -61,9 +61,33 @@ export const useFinanceData = () => {
       // Categories: we can fetch custom ones or just use default for now. 
       // If we implemented categories table, we'd fetch here.
 
-      if (txs) setTransactions(txs);
-      if (crds) setCards(crds);
-      if (gls) setGoals(gls);
+      if (txs) {
+        setTransactions(txs.map((t: any) => ({
+          ...t,
+          categoryId: t.category_id,
+          cardId: t.card_id,
+          paymentMethod: t.payment_method || t.paymentMethod, // Handle both cases if legacy data exists
+          isFixed: t.is_fixed || false
+        })));
+      }
+
+      if (crds) {
+        setCards(crds.map((c: any) => ({
+          ...c,
+          limit: c.limit_amount,
+          dueDay: parseInt(c.due_date),
+          closingDay: parseInt(c.closing_date),
+          brand: 'visa' // Default or map if stored
+        })));
+      }
+
+      if (gls) {
+        setGoals(gls.map((g: any) => ({
+          ...g,
+          targetAmount: g.target_amount,
+          currentAmount: g.current_amount
+        })));
+      }
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {

@@ -34,8 +34,8 @@ const CardsView: React.FC<CardsViewProps> = ({ cards, transactions, onAddCard })
 
   const getCardStats = (cardId: string) => {
     const currentInvoice = transactions
-      .filter(t => t.cardId === cardId && t.type === 'EXPENSE') // Fixed enum access
-      .reduce((sum, t) => sum + t.amount, 0);
+      .filter(t => t.cardId === cardId && t.type === TransactionType.EXPENSE)
+      .reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
 
     return { currentInvoice };
   };
@@ -63,7 +63,7 @@ const CardsView: React.FC<CardsViewProps> = ({ cards, transactions, onAddCard })
               {/* Visual Card Representation */}
               <div className="p-6 text-white relative h-48 flex flex-col justify-between" style={{ backgroundColor: card.color }}>
                 <div className="flex justify-between items-start">
-                  <i className={`fa-brands fa-cc-${card.brand} text-3xl opacity-80`}></i>
+                  <i className={`fa-brands fa-cc-${card.brand || 'visa'} text-3xl opacity-80`}></i>
                   <span className="text-xs font-mono opacity-70">**** 1234</span>
                 </div>
                 <div>

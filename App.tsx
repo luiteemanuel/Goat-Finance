@@ -12,14 +12,16 @@ import { useFinanceData } from './hooks/useFinanceData';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
+
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
 
   // Custom Hook for Data Persistence
   const {
     user,
     login,
     logout,
-    resetData,
+
     transactions,
     categories,
     cards,
@@ -51,9 +53,9 @@ const App: React.FC = () => {
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard':
-        return <Dashboard transactions={transactions} categories={categories} cards={cards} />;
+        return <Dashboard transactions={transactions} categories={categories} cards={cards} selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} />;
       case 'transactions':
-        return <Transactions transactions={transactions} categories={categories} cards={cards} onAddTransaction={handleAddTransaction} />;
+        return <Transactions transactions={transactions} categories={categories} cards={cards} onAddTransaction={handleAddTransaction} selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} />;
       case 'cards':
         return <CardsView cards={cards} transactions={transactions} onAddCard={addCard} />;
       case 'ai':
@@ -71,7 +73,7 @@ const App: React.FC = () => {
           </div>
         );
       default:
-        return <Dashboard transactions={transactions} categories={categories} cards={cards} />;
+        return <Dashboard transactions={transactions} categories={categories} cards={cards} selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} />;
     }
   };
 
@@ -92,7 +94,7 @@ const App: React.FC = () => {
             <button onClick={() => setIsMobileOpen(true)} className="p-2 text-slate-600">
               <i className="fa-solid fa-bars text-lg"></i>
             </button>
-            <span className="font-bold text-slate-800 ml-3">Goat Fin</span>
+            <span className="font-bold text-slate-800 ml-3">Goat Finance</span>
           </div>
           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center text-white font-bold text-xs">
             {user.name.substring(0, 2).toUpperCase()}
@@ -109,13 +111,6 @@ const App: React.FC = () => {
               </div>
               <div className="flex items-center gap-3">
                 <span className="text-sm text-slate-400 hidden sm:block">{new Date().toLocaleDateString('pt-BR')}</span>
-                <button
-                  onClick={resetData}
-                  className="text-xs text-red-500 hover:text-red-700 underline"
-                  title="Apagar todos os dados e começar do zero"
-                >
-                  Resetar Dados
-                </button>
               </div>
             </div>
             {renderContent()}
