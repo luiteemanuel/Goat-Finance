@@ -78,7 +78,7 @@ const App: React.FC = () => {
             <button onClick={() => setIsMobileOpen(true)} className="p-2 text-slate-600">
                <i className="fa-solid fa-bars text-lg"></i>
             </button>
-            <span className="font-bold text-slate-800 ml-3">FinFlow</span>
+            <span className="font-bold text-slate-800 ml-3">Goat Fin</span>
           </div>
           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center text-white font-bold text-xs">
              US

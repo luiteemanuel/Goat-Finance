@@ -34,9 +34,9 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isMobileOpen
         <div className="h-full flex flex-col">
           <div className="h-16 flex items-center px-6 border-b border-slate-100">
             <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center mr-3">
-              <i className="fa-solid fa-wallet text-white text-sm"></i>
+              <i className="fa-solid fa-goat text-white text-sm"></i>
             </div>
-            <span className="text-xl font-bold text-slate-800">FinFlow</span>
+            <span className="text-xl font-bold text-slate-800">Goat Fin</span>
           </div>
 
           <nav className="flex-1 py-6 px-3 space-y-1">

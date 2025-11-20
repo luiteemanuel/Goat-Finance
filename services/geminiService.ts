@@ -1,20 +1,14 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { Transaction, CreditCard, Category } from "../types";
 
-const apiKey = process.env.API_KEY || ''; // In a real app, ensure this is handled securely
-
-const ai = new GoogleGenAI({ apiKey });
+// The API key must be obtained exclusively from the environment variable process.env.API_KEY.
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 export const getFinancialAdvice = async (
   transactions: Transaction[],
   categories: Category[],
   cards: CreditCard[]
 ): Promise<any> => {
-  if (!apiKey) {
-    console.warn("API Key missing for Gemini");
-    return [];
-  }
-
   const summary = JSON.stringify({
     transactions: transactions.slice(0, 50), // Limit context size
     categories: categories.map(c => ({ name: c.name, limit: c.budgetLimit })),
@@ -53,8 +47,6 @@ export const getFinancialAdvice = async (
 };
 
 export const parseReceiptImage = async (base64Image: string): Promise<Partial<Transaction> | null> => {
-  if (!apiKey) return null;
-
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',

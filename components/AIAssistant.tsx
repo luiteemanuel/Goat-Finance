@@ -59,7 +59,7 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ transactions, categories, car
         <div className="absolute top-0 right-0 opacity-10">
             <i className="fa-solid fa-robot text-9xl transform translate-x-10 -translate-y-10"></i>
         </div>
-        <h2 className="text-3xl font-bold mb-2">FinFlow AI</h2>
+        <h2 className="text-3xl font-bold mb-2">Goat Fin AI</h2>
         <p className="text-indigo-100 mb-6 max-w-xl">
           Seu assistente financeiro inteligente. Analiso seus gastos, identifico padrões e sugiro onde você pode economizar.
         </p>
