@@ -1,14 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Transaction, Category, CreditCard, Goal } from '../types';
-import { MOCK_TRANSACTIONS, MOCK_CATEGORIES, MOCK_CARDS, MOCK_GOALS } from '../constants';
-
-const STORAGE_KEYS = {
-  TRANSACTIONS: 'goat_fin_transactions',
-  CATEGORIES: 'goat_fin_categories',
-  CARDS: 'goat_fin_cards',
-  GOALS: 'goat_fin_goals',
-  USER: 'goat_fin_user',
-};
+import { MOCK_CATEGORIES } from '../constants';
+import { supabase } from '../lib/supabase';
 
 export interface UserProfile {
   name: string;
@@ -17,114 +10,120 @@ export interface UserProfile {
 }
 
 export const useFinanceData = () => {
-  // State
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [categories, setCategories] = useState<Category[]>(MOCK_CATEGORIES);
   const [cards, setCards] = useState<CreditCard[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
   const [user, setUser] = useState<UserProfile | null>(null);
-  const [isLoaded, setIsLoaded] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  // Load data from localStorage on mount
+  // Auth Listener
   useEffect(() => {
-    const loadData = () => {
-      try {
-        const storedUser = localStorage.getItem(STORAGE_KEYS.USER);
-        const storedTransactions = localStorage.getItem(STORAGE_KEYS.TRANSACTIONS);
-        const storedCategories = localStorage.getItem(STORAGE_KEYS.CATEGORIES);
-        const storedCards = localStorage.getItem(STORAGE_KEYS.CARDS);
-        const storedGoals = localStorage.getItem(STORAGE_KEYS.GOALS);
-
-        if (storedUser) {
-          setUser(JSON.parse(storedUser));
-        }
-
-        // If user exists but no data, use MOCK data as initial seed (optional, or start empty)
-        // For this request, user wants to "zero out", so we start empty if nothing is stored.
-        // However, to keep the app usable immediately, we can seed if it's the *very first* run ever.
-        // Let's stick to: if storage is empty, use empty arrays (except categories maybe).
-        
-        setTransactions(storedTransactions ? JSON.parse(storedTransactions) : []);
-        setCategories(storedCategories ? JSON.parse(storedCategories) : MOCK_CATEGORIES); // Keep default categories
-        setCards(storedCards ? JSON.parse(storedCards) : []);
-        setGoals(storedGoals ? JSON.parse(storedGoals) : []);
-        
-        setIsLoaded(true);
-      } catch (error) {
-        console.error("Failed to load data from storage:", error);
-        // Fallback to safe defaults
-        setCategories(MOCK_CATEGORIES);
-        setIsLoaded(true);
+    // Check active session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        setUser({
+          name: session.user.user_metadata.full_name || session.user.email?.split('@')[0] || 'Usuário',
+          email: session.user.email
+        });
+        fetchData();
+      } else {
+        setUser(null);
+        setLoading(false);
       }
-    };
+    });
 
-    loadData();
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        setUser({
+          name: session.user.user_metadata.full_name || session.user.email?.split('@')[0] || 'Usuário',
+          email: session.user.email
+        });
+        fetchData();
+      } else {
+        setUser(null);
+        setTransactions([]);
+        setCards([]);
+        setGoals([]);
+        setLoading(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  // Persist data whenever it changes
-  useEffect(() => {
-    if (!isLoaded) return;
-    localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(transactions));
-  }, [transactions, isLoaded]);
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const { data: txs } = await supabase.from('transactions').select('*').order('date', { ascending: false });
+      const { data: crds } = await supabase.from('cards').select('*');
+      const { data: gls } = await supabase.from('goals').select('*');
+      // Categories: we can fetch custom ones or just use default for now. 
+      // If we implemented categories table, we'd fetch here.
 
-  useEffect(() => {
-    if (!isLoaded) return;
-    localStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(categories));
-  }, [categories, isLoaded]);
-
-  useEffect(() => {
-    if (!isLoaded) return;
-    localStorage.setItem(STORAGE_KEYS.CARDS, JSON.stringify(cards));
-  }, [cards, isLoaded]);
-
-  useEffect(() => {
-    if (!isLoaded) return;
-    localStorage.setItem(STORAGE_KEYS.GOALS, JSON.stringify(goals));
-  }, [goals, isLoaded]);
-
-  useEffect(() => {
-    if (!isLoaded) return;
-    if (user) {
-      localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user));
-    } else {
-      localStorage.removeItem(STORAGE_KEYS.USER);
+      if (txs) setTransactions(txs);
+      if (crds) setCards(crds);
+      if (gls) setGoals(gls);
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    } finally {
+      setLoading(false);
     }
-  }, [user, isLoaded]);
-
-  // Actions
-  const login = (name: string, email?: string) => {
-    const newUser = { name, email };
-    setUser(newUser);
-    // Optional: Seed data if it's a fresh login and empty? 
-    // For now, let's keep it clean.
   };
 
-  const logout = () => {
-    setUser(null);
-    // Optional: Clear data on logout? Usually better to keep it or have a separate "Reset"
+  const login = () => {
+    // Handled by LoginScreen directly calling supabase.auth
   };
 
-  const resetData = () => {
-    if (window.confirm("Tem certeza? Isso apagará todas as suas transações, cartões e metas.")) {
-      setTransactions([]);
+  const logout = async () => {
+    await supabase.auth.signOut();
+  };
+
+  const resetData = async () => {
+    if (window.confirm("Tem certeza? Isso apagará TODOS os seus dados do servidor permanentemente.")) {
+      const { error } = await supabase.from('transactions').delete().neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all
+      if (!error) setTransactions([]);
+
+      await supabase.from('cards').delete().neq('id', '00000000-0000-0000-0000-000000000000');
       setCards([]);
+
+      await supabase.from('goals').delete().neq('id', '00000000-0000-0000-0000-000000000000');
       setGoals([]);
-      // Reset categories to default
-      setCategories(MOCK_CATEGORIES);
-      
-      localStorage.removeItem(STORAGE_KEYS.TRANSACTIONS);
-      localStorage.removeItem(STORAGE_KEYS.CARDS);
-      localStorage.removeItem(STORAGE_KEYS.GOALS);
-      localStorage.removeItem(STORAGE_KEYS.CATEGORIES);
     }
   };
 
-  const addTransaction = (t: Transaction) => {
+  const addTransaction = async (t: Transaction) => {
+    // Optimistic update
     setTransactions(prev => [t, ...prev]);
+
+    const { data, error } = await supabase.from('transactions').insert({
+      description: t.description,
+      amount: t.amount,
+      type: t.type,
+      category_id: t.categoryId,
+      date: t.date,
+      user_id: (await supabase.auth.getUser()).data.user?.id
+    }).select().single();
+
+    if (error) {
+      console.error('Error adding transaction:', error);
+      // Revert optimistic update if needed
+    } else if (data) {
+      // Update with real ID from DB
+      setTransactions(prev => prev.map(item => item.id === t.id ? { ...item, id: data.id } : item));
+    }
   };
 
-  const addGoal = (g: Goal) => {
+  const addGoal = async (g: Goal) => {
     setGoals(prev => [...prev, g]);
+    await supabase.from('goals').insert({
+      name: g.name,
+      target_amount: g.targetAmount,
+      current_amount: g.currentAmount,
+      deadline: g.deadline,
+      icon: g.icon,
+      user_id: (await supabase.auth.getUser()).data.user?.id
+    });
   };
 
   return {
@@ -138,9 +137,6 @@ export const useFinanceData = () => {
     goals,
     addTransaction,
     addGoal,
-    setTransactions, // Expose setters if needed for complex updates
-    setCards,
-    setGoals,
-    isLoaded
+    isLoaded: !loading
   };
 };
