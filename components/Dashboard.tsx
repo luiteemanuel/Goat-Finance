@@ -18,11 +18,11 @@ const PAYMENT_COLORS: Record<string, string> = {
 };
 
 const Dashboard: React.FC<DashboardProps> = ({ transactions, categories, cards }) => {
-  
+
   const summary = useMemo(() => {
     let income = 0;
     let expense = 0;
-    
+
     transactions.forEach(t => {
       if (t.type === TransactionType.INCOME) income += t.amount;
       else expense += t.amount;
@@ -70,10 +70,28 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions, categories, cards }
 
   return (
     <div className="space-y-6 animate-fade-in">
+      {/* Stylish Header */}
+      <div className="bg-gradient-to-r from-slate-800 to-slate-900 rounded-2xl p-8 text-white shadow-lg relative overflow-hidden">
+        <div className="absolute -right-6 -top-6 opacity-10 transform rotate-12">
+          <i className="fa-solid fa-goat text-9xl"></i>
+        </div>
+        <div className="relative z-10">
+          <h2 className="text-3xl font-bold mb-2 flex items-center gap-3">
+            <div className="w-10 h-10 bg-indigo-500 rounded-lg flex items-center justify-center shadow-lg shadow-indigo-500/30">
+              <i className="fa-solid fa-goat text-white text-lg"></i>
+            </div>
+            Goat Finance
+          </h2>
+          <p className="text-slate-400 font-medium ml-1">
+            Seu patrimônio, sempre no topo. 🐐
+          </p>
+        </div>
+      </div>
+
       <div className="flex justify-end">
-         <button className="text-sm text-primary font-medium hover:underline flex items-center">
-           <i className="fa-solid fa-rotate mr-2"></i> Sincronizar Open Finance
-         </button>
+        <button className="text-sm text-primary font-medium hover:underline flex items-center">
+          <i className="fa-solid fa-rotate mr-2"></i> Sincronizar Open Finance
+        </button>
       </div>
 
       {/* Summary Cards */}
@@ -129,36 +147,36 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions, categories, cards }
       {/* Recurring Expenses Widget */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 lg:col-span-2">
-           <h4 className="text-lg font-bold text-slate-800 mb-4 flex items-center">
-             <i className="fa-solid fa-calendar-check mr-2 text-slate-400"></i>
-             Contas Fixas do Mês
-           </h4>
-           <div className="space-y-3">
-             {recurringExpenses.length === 0 && <p className="text-slate-400 text-sm">Nenhuma conta fixa cadastrada.</p>}
-             {recurringExpenses.map(t => (
-               <div key={t.id} className="flex items-center justify-between p-3 hover:bg-slate-50 rounded-lg transition-colors border border-transparent hover:border-slate-100">
-                  <div className="flex items-center gap-3">
-                     <div className={`w-2 h-2 rounded-full ${t.status === TransactionStatus.PAID ? 'bg-emerald-500' : 'bg-slate-300'}`}></div>
-                     <div>
-                       <p className="font-medium text-slate-800 text-sm">{t.description}</p>
-                       <p className="text-xs text-slate-500">{new Date(t.date).toLocaleDateString('pt-BR')} • {t.paymentMethod}</p>
-                     </div>
+          <h4 className="text-lg font-bold text-slate-800 mb-4 flex items-center">
+            <i className="fa-solid fa-calendar-check mr-2 text-slate-400"></i>
+            Contas Fixas do Mês
+          </h4>
+          <div className="space-y-3">
+            {recurringExpenses.length === 0 && <p className="text-slate-400 text-sm">Nenhuma conta fixa cadastrada.</p>}
+            {recurringExpenses.map(t => (
+              <div key={t.id} className="flex items-center justify-between p-3 hover:bg-slate-50 rounded-lg transition-colors border border-transparent hover:border-slate-100">
+                <div className="flex items-center gap-3">
+                  <div className={`w-2 h-2 rounded-full ${t.status === TransactionStatus.PAID ? 'bg-emerald-500' : 'bg-slate-300'}`}></div>
+                  <div>
+                    <p className="font-medium text-slate-800 text-sm">{t.description}</p>
+                    <p className="text-xs text-slate-500">{new Date(t.date).toLocaleDateString('pt-BR')} • {t.paymentMethod}</p>
                   </div>
-                  <div className="text-right">
-                     <p className="font-bold text-slate-700">R$ {t.amount.toFixed(2)}</p>
-                     <span className={`text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wide font-bold ${t.status === TransactionStatus.PAID ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-600'}`}>
-                       {t.status === TransactionStatus.PAID ? 'Pago' : 'Pendente'}
-                     </span>
-                  </div>
-               </div>
-             ))}
-           </div>
+                </div>
+                <div className="text-right">
+                  <p className="font-bold text-slate-700">R$ {t.amount.toFixed(2)}</p>
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wide font-bold ${t.status === TransactionStatus.PAID ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-600'}`}>
+                    {t.status === TransactionStatus.PAID ? 'Pago' : 'Pendente'}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Payment Methods Chart */}
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-           <h4 className="text-lg font-bold text-slate-800 mb-2">Formas de Pagamento</h4>
-           <div className="h-48">
+          <h4 className="text-lg font-bold text-slate-800 mb-2">Formas de Pagamento</h4>
+          <div className="h-48">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
@@ -175,7 +193,7 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions, categories, cards }
                   ))}
                 </Pie>
                 <Tooltip formatter={(value: number) => `R$ ${value.toFixed(2)}`} />
-                <Legend verticalAlign="bottom" height={36} iconSize={10} wrapperStyle={{fontSize: '10px'}}/>
+                <Legend verticalAlign="bottom" height={36} iconSize={10} wrapperStyle={{ fontSize: '10px' }} />
               </PieChart>
             </ResponsiveContainer>
           </div>
@@ -218,8 +236,8 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions, categories, cards }
               <BarChart data={cardData} layout="vertical" margin={{ top: 5, right: 30, left: 40, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                 <XAxis type="number" hide />
-                <YAxis type="category" dataKey="name" width={100} tick={{fontSize: 12}} />
-                <Tooltip cursor={{fill: 'transparent'}} formatter={(value: number) => `R$ ${value.toFixed(2)}`} />
+                <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 12 }} />
+                <Tooltip cursor={{ fill: 'transparent' }} formatter={(value: number) => `R$ ${value.toFixed(2)}`} />
                 <Bar dataKey="value" fill="#6366f1" radius={[0, 4, 4, 0]} barSize={20} />
               </BarChart>
             </ResponsiveContainer>
@@ -232,30 +250,30 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions, categories, cards }
         <h4 className="text-lg font-bold text-slate-800 mb-4">Alertas de Orçamento</h4>
         <div className="space-y-4">
           {categories.map(cat => {
-             const spent = transactions
+            const spent = transactions
               .filter(t => t.categoryId === cat.id && t.type === TransactionType.EXPENSE)
               .reduce((sum, t) => sum + t.amount, 0);
-             const percentage = (spent / cat.budgetLimit) * 100;
-             
-             if (percentage < 10) return null; // Hide very low usage
+            const percentage = (spent / cat.budgetLimit) * 100;
 
-             let colorClass = "bg-emerald-500";
-             if (percentage > 80) colorClass = "bg-amber-500";
-             if (percentage >= 100) colorClass = "bg-red-500";
+            if (percentage < 10) return null; // Hide very low usage
 
-             return (
-               <div key={cat.id}>
-                 <div className="flex justify-between text-sm mb-1">
-                   <span className="font-medium text-slate-700">{cat.name}</span>
-                   <span className={`font-medium ${percentage >= 100 ? 'text-red-600' : 'text-slate-600'}`}>
-                     {Math.round(percentage)}% (R$ {spent} / R$ {cat.budgetLimit})
-                   </span>
-                 </div>
-                 <div className="w-full bg-slate-100 rounded-full h-2">
-                   <div className={`h-2 rounded-full ${colorClass}`} style={{ width: `${Math.min(percentage, 100)}%` }}></div>
-                 </div>
-               </div>
-             )
+            let colorClass = "bg-emerald-500";
+            if (percentage > 80) colorClass = "bg-amber-500";
+            if (percentage >= 100) colorClass = "bg-red-500";
+
+            return (
+              <div key={cat.id}>
+                <div className="flex justify-between text-sm mb-1">
+                  <span className="font-medium text-slate-700">{cat.name}</span>
+                  <span className={`font-medium ${percentage >= 100 ? 'text-red-600' : 'text-slate-600'}`}>
+                    {Math.round(percentage)}% (R$ {spent} / R$ {cat.budgetLimit})
+                  </span>
+                </div>
+                <div className="w-full bg-slate-100 rounded-full h-2">
+                  <div className={`h-2 rounded-full ${colorClass}`} style={{ width: `${Math.min(percentage, 100)}%` }}></div>
+                </div>
+              </div>
+            )
           })}
         </div>
       </div>
