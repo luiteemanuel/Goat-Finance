@@ -1,20 +1,71 @@
 <div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+  <h1>🐐 Goat Finance</h1>
+  <p>Seu gerenciador financeiro pessoal inteligente, impulsionado por IA.</p>
 </div>
 
-# Run and deploy your AI Studio app
+## 🚀 Funcionalidades
 
-This contains everything you need to run your app locally.
+### 📊 Dashboard Financeiro
+- Visão geral completa de saldo, receitas e despesas.
+- Gráficos intuitivos para acompanhar a evolução do seu patrimônio.
+- Resumo mensal de gastos por categoria.
 
-View your app in AI Studio: https://ai.studio/apps/drive/1JYE5vPJT3le4wSU9lHclt0ndCtyX-3_N
+### 💸 Gestão de Transações
+- Adicione receitas e despesas facilmente.
+- Categorize seus gastos para melhor organização.
+- Histórico detalhado de todas as movimentações.
 
-## Run Locally
+### 💳 Cartões de Crédito
+- Controle o limite e o uso de múltiplos cartões.
+- Acompanhe a data de fechamento e vencimento das faturas.
+- Visualização clara do disponível vs. utilizado.
 
-**Prerequisites:**  Node.js
+### 🤖 Assistente IA (Gemini)
+- **Dicas Personalizadas**: Receba conselhos financeiros baseados nos seus hábitos de consumo.
+- **Leitura de Recibos (OCR)**: Tire uma foto ou faça upload de um recibo e deixe a IA preencher os dados da transação automaticamente.
 
+### 🎯 Metas Financeiras
+- Defina objetivos de economia (ex: Viagem, Reserva de Emergência).
+- Acompanhe o progresso visualmente.
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+### 📈 Relatórios
+- Análises profundas sobre seus hábitos financeiros.
+- Identifique onde você pode economizar mais.
+
+---
+
+## 🛠️ Como Rodar Localmente
+
+### Pré-requisitos
+- **Node.js** (versão 18 ou superior)
+- Uma chave de API do Google Gemini (gratuita no [Google AI Studio](https://aistudio.google.com/))
+
+### Passo a Passo
+
+1. **Instale as dependências:**
+   ```bash
+   npm install
+   ```
+
+2. **Configure a Chave de API:**
+   - Crie um arquivo chamado `.env` na raiz do projeto.
+   - Adicione sua chave da seguinte forma:
+     ```env
+     GEMINI_API_KEY=sua_chave_aqui
+     ```
+
+3. **Inicie o Servidor:**
+   ```bash
+   npm run dev
+   ```
+
+4. **Acesse o App:**
+   - Abra seu navegador em `http://localhost:3000`
+
+---
+
+## 📱 Tecnologias
+- **Frontend**: React, Vite, TypeScript
+- **Estilização**: TailwindCSS
+- **IA**: Google Gemini SDK
+- **Ícones**: FontAwesome
