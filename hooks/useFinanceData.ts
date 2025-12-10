@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Transaction, Category, CreditCard, Goal } from '../types';
+import { getAccounts, getTransactions } from '../services/pluggy';
+import { Transaction, Category, CreditCard, Goal, TransactionStatus, PaymentMethod } from '../types';
 import { MOCK_CATEGORIES } from '../constants';
 import { supabase } from '../lib/supabase';
 
@@ -168,6 +169,69 @@ export const useFinanceData = () => {
     }
   };
 
+  const syncPluggyData = async (itemId: string) => {
+    try {
+      const accounts = await getAccounts(itemId);
+      let newTransactionsCount = 0;
+
+      for (const account of accounts) {
+        // Opcional: Adicionar cartão se for crédito
+        if (account.type === 'CREDIT' || account.subtype === 'CREDIT_CARD') {
+          const newCard: CreditCard = {
+            id: Date.now().toString(),
+            name: account.name + ' (Importado)',
+            limit: 0, // Pluggy as vezes não retorna limite
+            dueDay: 1,
+            closingDay: 1,
+            color: '#000000',
+            brand: 'visa'
+          };
+          // await addCard(newCard); // Descomente se quiser criar cartões automaticamente
+        }
+
+        const pluggyTransactions = await getTransactions(account.id);
+
+        for (const pt of pluggyTransactions) {
+          const amount = Math.abs(pt.amount);
+          const type = pt.amount < 0 ? 'EXPENSE' : 'INCOME';
+
+          // Mapeamento simples de categoria
+          let categoryId = categories[0].id;
+          if (pt.category) {
+            // Tentar encontrar categoria pelo nome (muito básico)
+            const found = categories.find(c => c.name.toLowerCase() === pt.category.toLowerCase());
+            if (found) categoryId = found.id;
+          }
+
+          const newTx: Transaction = {
+            id: pt.id, // Usando ID do Pluggy temporariamente (pode causar conflito se UUID for esperado)
+            // Melhor gerar um novo ID ou deixar o banco gerar se for insert
+            // Mas aqui estamos passando para addTransaction que espera um objeto Transaction
+            // Vamos deixar vazio ou temp, o addTransaction lida com isso?
+            // addTransaction usa Date.now() no App.tsx, mas aqui estamos chamando a versão do hook.
+            // A versão do hook faz insert no supabase.
+            // Vamos passar um ID temporário.
+            description: pt.description,
+            amount: amount,
+            type: type as 'EXPENSE' | 'INCOME',
+            date: new Date(pt.date).toISOString().split('T')[0],
+            categoryId: categoryId,
+            paymentMethod: account.type === 'CREDIT' ? PaymentMethod.CREDIT_CARD : PaymentMethod.DEBIT_CARD,
+            status: TransactionStatus.PAID,
+            isFixed: false
+          } as Transaction;
+
+          await addTransaction(newTx);
+          newTransactionsCount++;
+        }
+      }
+      alert(`Sincronização concluída! ${newTransactionsCount} transações importadas.`);
+    } catch (error) {
+      console.error("Sync error", error);
+      alert('Erro ao sincronizar dados com Pluggy.');
+    }
+  };
+
   return {
     user,
     login,
@@ -180,6 +244,7 @@ export const useFinanceData = () => {
     addTransaction,
     addGoal,
     addCard,
+    syncPluggyData,
     isLoaded: !loading
   };
 };

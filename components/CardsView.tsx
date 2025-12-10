@@ -1,13 +1,15 @@
 import React from 'react';
 import { CreditCard, Transaction, TransactionType } from '../types';
+import BankConnect from './BankConnect';
 
 interface CardsViewProps {
   cards: CreditCard[];
   transactions: Transaction[];
   onAddCard: (card: CreditCard) => void;
+  onSyncPluggy?: (itemId: string) => void;
 }
 
-const CardsView: React.FC<CardsViewProps> = ({ cards, transactions, onAddCard }) => {
+const CardsView: React.FC<CardsViewProps> = ({ cards, transactions, onAddCard, onSyncPluggy }) => {
 
   const handleAddCard = () => {
     const name = prompt("Nome do Cartão (ex: Nubank):");
@@ -44,12 +46,20 @@ const CardsView: React.FC<CardsViewProps> = ({ cards, transactions, onAddCard })
     <div className="space-y-6 animate-fade-in">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-slate-800">Meus Cartões</h2>
-        <button
-          onClick={handleAddCard}
-          className="bg-slate-800 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-900 transition-colors"
-        >
-          <i className="fa-solid fa-plus mr-2"></i> Novo Cartão
-        </button>
+        <div className="flex gap-2">
+          {onSyncPluggy && (
+            <BankConnect
+              onSuccess={(data) => onSyncPluggy(data.item.id)}
+              onError={(err) => console.error(err)}
+            />
+          )}
+          <button
+            onClick={handleAddCard}
+            className="bg-slate-800 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-slate-900 transition-colors"
+          >
+            <i className="fa-solid fa-plus mr-2"></i> Novo Cartão
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

@@ -28,7 +28,8 @@ const App: React.FC = () => {
     goals,
     addTransaction,
     addGoal,
-    addCard
+    addCard,
+    syncPluggyData
   } = useFinanceData();
 
   const handleAddTransaction = (newTransaction: Partial<Transaction>) => {
@@ -57,7 +58,7 @@ const App: React.FC = () => {
       case 'transactions':
         return <Transactions transactions={transactions} categories={categories} cards={cards} onAddTransaction={handleAddTransaction} selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} />;
       case 'cards':
-        return <CardsView cards={cards} transactions={transactions} onAddCard={addCard} />;
+        return <CardsView cards={cards} transactions={transactions} onAddCard={addCard} onSyncPluggy={syncPluggyData} />;
       case 'ai':
         return <AIAssistant transactions={transactions} categories={categories} cards={cards} onAddTransaction={handleAddTransaction} />;
       case 'goals':

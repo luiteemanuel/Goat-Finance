@@ -5,9 +5,10 @@ interface SidebarProps {
   setActiveTab: (tab: string) => void;
   isMobileOpen: boolean;
   setIsMobileOpen: (open: boolean) => void;
+  onLogout: () => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isMobileOpen, setIsMobileOpen }) => {
+const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isMobileOpen, setIsMobileOpen, onLogout }) => {
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: 'fa-chart-pie' },
     { id: 'transactions', label: 'Transações', icon: 'fa-list-ul' },
@@ -73,6 +74,13 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, isMobileOpen
                   <p className="text-xs text-slate-500">Pro Plan</p>
                 </div>
               </div>
+              <button
+                onClick={onLogout}
+                className="w-full mt-2 flex items-center justify-center px-3 py-2 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
+              >
+                <i className="fa-solid fa-right-from-bracket mr-2"></i>
+                Sair
+              </button>
             </div>
           </div>
         </div>
