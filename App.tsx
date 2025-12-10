@@ -54,7 +54,7 @@ const App: React.FC = () => {
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard':
-        return <Dashboard transactions={transactions} categories={categories} cards={cards} selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} />;
+        return <Dashboard transactions={transactions} categories={categories} cards={cards} selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} onSyncPluggy={syncPluggyData} />;
       case 'transactions':
         return <Transactions transactions={transactions} categories={categories} cards={cards} onAddTransaction={handleAddTransaction} selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} />;
       case 'cards':

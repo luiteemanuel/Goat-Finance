@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import BankConnect from './BankConnect';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend } from 'recharts';
 import { Transaction, Category, CreditCard, TransactionType, PaymentMethod, TransactionStatus } from '../types';
 
@@ -8,6 +9,7 @@ interface DashboardProps {
   cards: CreditCard[];
   selectedMonth: string;
   onMonthChange: (month: string) => void;
+  onSyncPluggy?: (itemId: string) => void;
 }
 
 const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#8b5cf6', '#cbd5e1'];
@@ -19,7 +21,7 @@ const PAYMENT_COLORS: Record<string, string> = {
   [PaymentMethod.TRANSFER]: '#3b82f6',
 };
 
-const Dashboard: React.FC<DashboardProps> = ({ transactions, categories, cards, selectedMonth, onMonthChange }) => {
+const Dashboard: React.FC<DashboardProps> = ({ transactions, categories, cards, selectedMonth, onMonthChange, onSyncPluggy }) => {
 
   const filteredTransactions = useMemo(() => {
     return transactions.filter(t => t.date.startsWith(selectedMonth));
@@ -125,9 +127,15 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions, categories, cards, 
           </button>
         </div>
 
-        <button className="text-sm text-primary font-medium hover:underline flex items-center">
-          <i className="fa-solid fa-rotate mr-2"></i> Sincronizar Open Finance
-        </button>
+        <div className="text-sm text-primary font-medium hover:underline flex items-center">
+          {onSyncPluggy ? (
+            <BankConnect onSuccess={(data) => onSyncPluggy(data.item.id)} onError={(error) => console.error(error)} />
+          ) : (
+            <button className="text-sm text-primary font-medium hover:underline flex items-center" disabled>
+              <i className="fa-solid fa-rotate mr-2"></i> Sincronizar Open Finance (Indisponível)
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Summary Cards */}
