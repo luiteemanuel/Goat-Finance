@@ -1,15 +1,17 @@
+
 import React, { useState } from 'react';
-import { supabase } from '../lib/supabase';
+import { auth } from '../lib/firebase';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from 'firebase/auth';
 
 interface LoginScreenProps {
-  onLogin: () => void; // No arguments needed, auth state is global
+  onLogin: () => void;
 }
 
 const LoginScreen: React.FC<LoginScreenProps> = () => {
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [name, setName] = useState(''); // Only for Sign Up
+  const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -20,27 +22,25 @@ const LoginScreen: React.FC<LoginScreenProps> = () => {
 
     try {
       if (isSignUp) {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: {
-              full_name: name,
-            },
-          },
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        await updateProfile(userCredential.user, {
+          displayName: name
         });
-        if (error) throw error;
-        alert('Cadastro realizado! Verifique seu email para confirmar (se necessário) ou faça login.');
-        setIsSignUp(false);
+        alert('Conta criada com sucesso!');
+        // Firebase automatically signs in after creation
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-        if (error) throw error;
+        await signInWithEmailAndPassword(auth, email, password);
       }
     } catch (err: any) {
-      setError(err.message);
+      console.error(err);
+      let msg = 'Erro ao realizar login/cadastro.';
+      if (err.code === 'auth/email-already-in-use') msg = 'Este email já está em uso.';
+      if (err.code === 'auth/invalid-email') msg = 'Email inválido.';
+      if (err.code === 'auth/weak-password') msg = 'Senha muito fraca (min. 6 caracteres).';
+      if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') msg = 'Email ou senha incorretos.';
+      if (err.code === 'auth/invalid-credential') msg = 'Credenciais inválidas.';
+
+      setError(msg);
     } finally {
       setLoading(false);
     }

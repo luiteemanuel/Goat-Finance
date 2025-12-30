@@ -1,8 +1,21 @@
+
 import { useState, useEffect } from 'react';
 import { getAccounts, getTransactions } from '../services/pluggy';
 import { Transaction, Category, CreditCard, Goal, TransactionStatus, PaymentMethod } from '../types';
 import { MOCK_CATEGORIES } from '../constants';
-import { supabase } from '../lib/supabase';
+import { auth, db } from '../lib/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
+import {
+  collection,
+  getDocs,
+  addDoc,
+  query,
+  where,
+  orderBy,
+  deleteDoc,
+  doc,
+  Timestamp
+} from 'firebase/firestore';
 
 export interface UserProfile {
   name: string;
@@ -20,27 +33,13 @@ export const useFinanceData = () => {
 
   // Auth Listener
   useEffect(() => {
-    // Check active session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      if (currentUser) {
         setUser({
-          name: session.user.user_metadata.full_name || session.user.email?.split('@')[0] || 'Usuário',
-          email: session.user.email
+          name: currentUser.displayName || currentUser.email?.split('@')[0] || 'Usuário',
+          email: currentUser.email || undefined
         });
-        fetchData();
-      } else {
-        setUser(null);
-        setLoading(false);
-      }
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        setUser({
-          name: session.user.user_metadata.full_name || session.user.email?.split('@')[0] || 'Usuário',
-          email: session.user.email
-        });
-        fetchData();
+        fetchData(currentUser.uid);
       } else {
         setUser(null);
         setTransactions([]);
@@ -50,43 +49,52 @@ export const useFinanceData = () => {
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => unsubscribe();
   }, []);
 
-  const fetchData = async () => {
+  const fetchData = async (userId: string) => {
     setLoading(true);
     try {
-      const { data: txs } = await supabase.from('transactions').select('*').order('date', { ascending: false });
-      const { data: crds } = await supabase.from('cards').select('*');
-      const { data: gls } = await supabase.from('goals').select('*');
-      // Categories: we can fetch custom ones or just use default for now. 
-      // If we implemented categories table, we'd fetch here.
+      // Transactions
+      const txQuery = query(collection(db, 'transactions'), where('userId', '==', userId), orderBy('date', 'desc'));
+      const txSnapshot = await getDocs(txQuery);
+      const txs = txSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
+
+      // Cards
+      const cardQuery = query(collection(db, 'cards'), where('userId', '==', userId));
+      const cardSnapshot = await getDocs(cardQuery);
+      const crds = cardSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
+
+      // Goals
+      const goalQuery = query(collection(db, 'goals'), where('userId', '==', userId));
+      const goalSnapshot = await getDocs(goalQuery);
+      const gls = goalSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
 
       if (txs) {
         setTransactions(txs.map((t: any) => ({
           ...t,
-          categoryId: t.category_id,
-          cardId: t.card_id,
-          paymentMethod: t.payment_method || t.paymentMethod, // Handle both cases if legacy data exists
-          isFixed: t.is_fixed || false
+          categoryId: t.categoryId, // Firestore data should match our types roughly
+          cardId: t.cardId,
+          paymentMethod: t.paymentMethod,
+          isFixed: t.isFixed || false
         })));
       }
 
       if (crds) {
         setCards(crds.map((c: any) => ({
           ...c,
-          limit: c.limit_amount,
-          dueDay: parseInt(c.due_date),
-          closingDay: parseInt(c.closing_date),
-          brand: 'visa' // Default or map if stored
+          limit: c.limit,
+          dueDay: c.dueDay,
+          closingDay: c.closingDay,
+          brand: 'visa'
         })));
       }
 
       if (gls) {
         setGoals(gls.map((g: any) => ({
           ...g,
-          targetAmount: g.target_amount,
-          currentAmount: g.current_amount
+          targetAmount: g.targetAmount,
+          currentAmount: g.currentAmount
         })));
       }
     } catch (error) {
@@ -97,75 +105,98 @@ export const useFinanceData = () => {
   };
 
   const login = () => {
-    // Handled by LoginScreen directly calling supabase.auth
+    // Handled by LoginScreen
   };
 
   const logout = async () => {
-    await supabase.auth.signOut();
+    await auth.signOut();
   };
 
   const resetData = async () => {
+    if (!auth.currentUser) return;
     if (window.confirm("Tem certeza? Isso apagará TODOS os seus dados do servidor permanentemente.")) {
-      const { error } = await supabase.from('transactions').delete().neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all
-      if (!error) setTransactions([]);
+      try {
+        const userId = auth.currentUser.uid;
 
-      await supabase.from('cards').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-      setCards([]);
+        const txQuery = query(collection(db, 'transactions'), where('userId', '==', userId));
+        const txDocs = await getDocs(txQuery);
+        txDocs.forEach(d => deleteDoc(doc(db, 'transactions', d.id)));
+        setTransactions([]);
 
-      await supabase.from('goals').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-      setGoals([]);
+        const cardQuery = query(collection(db, 'cards'), where('userId', '==', userId));
+        const cardDocs = await getDocs(cardQuery);
+        cardDocs.forEach(d => deleteDoc(doc(db, 'cards', d.id)));
+        setCards([]);
+
+        const goalQuery = query(collection(db, 'goals'), where('userId', '==', userId));
+        const goalDocs = await getDocs(goalQuery);
+        goalDocs.forEach(d => deleteDoc(doc(db, 'goals', d.id)));
+        setGoals([]);
+      } catch (e) {
+        console.error("Error resetting data", e);
+      }
     }
   };
 
   const addTransaction = async (t: Transaction) => {
-    // Optimistic update
-    setTransactions(prev => [t, ...prev]);
+    if (!auth.currentUser) return;
 
-    const { data, error } = await supabase.from('transactions').insert({
-      description: t.description,
-      amount: t.amount,
-      type: t.type,
-      category_id: t.categoryId,
-      date: t.date,
-      user_id: (await supabase.auth.getUser()).data.user?.id
-    }).select().single();
+    // Optimistic Update
+    // Need temporary ID
+    const tempT = { ...t, id: 'temp-' + Date.now() };
+    setTransactions(prev => [tempT, ...prev]);
 
-    if (error) {
+    try {
+      const docRef = await addDoc(collection(db, 'transactions'), {
+        description: t.description,
+        amount: t.amount,
+        type: t.type,
+        categoryId: t.categoryId,
+        date: t.date,
+        paymentMethod: t.paymentMethod,
+        isFixed: t.isFixed || false,
+        status: t.status,
+        userId: auth.currentUser.uid,
+        createdAt: Timestamp.now()
+      });
+
+      setTransactions(prev => prev.map(item => item.id === tempT.id ? { ...item, id: docRef.id } : item));
+    } catch (error) {
       console.error('Error adding transaction:', error);
-      // Revert optimistic update if needed
-    } else if (data) {
-      // Update with real ID from DB
-      setTransactions(prev => prev.map(item => item.id === t.id ? { ...item, id: data.id } : item));
+      // Rollback optimistic update if needed
+      setTransactions(prev => prev.filter(item => item.id !== tempT.id));
     }
   };
 
   const addGoal = async (g: Goal) => {
+    if (!auth.currentUser) return;
     setGoals(prev => [...prev, g]);
-    await supabase.from('goals').insert({
+    await addDoc(collection(db, 'goals'), {
       name: g.name,
-      target_amount: g.targetAmount,
-      current_amount: g.currentAmount,
+      targetAmount: g.targetAmount,
+      currentAmount: g.currentAmount,
       deadline: g.deadline,
       icon: g.icon,
-      user_id: (await supabase.auth.getUser()).data.user?.id
+      userId: auth.currentUser.uid
     });
   };
 
   const addCard = async (c: CreditCard) => {
+    if (!auth.currentUser) return;
     setCards(prev => [...prev, c]);
-    const { data, error } = await supabase.from('cards').insert({
-      name: c.name,
-      limit_amount: c.limit,
-      color: c.color,
-      due_date: c.dueDay,
-      closing_date: c.closingDay,
-      user_id: (await supabase.auth.getUser()).data.user?.id
-    }).select().single();
 
-    if (error) {
+    try {
+      const docRef = await addDoc(collection(db, 'cards'), {
+        name: c.name,
+        limit: c.limit,
+        color: c.color,
+        dueDay: c.dueDay,
+        closingDay: c.closingDay,
+        userId: auth.currentUser.uid
+      });
+      setCards(prev => prev.map(item => item.id === c.id ? { ...item, id: docRef.id } : item));
+    } catch (error) {
       console.error('Error adding card:', error);
-    } else if (data) {
-      setCards(prev => prev.map(item => item.id === c.id ? { ...item, id: data.id } : item));
     }
   };
 
@@ -175,18 +206,8 @@ export const useFinanceData = () => {
       let newTransactionsCount = 0;
 
       for (const account of accounts) {
-        // Opcional: Adicionar cartão se for crédito
         if (account.type === 'CREDIT' || account.subtype === 'CREDIT_CARD') {
-          const newCard: CreditCard = {
-            id: Date.now().toString(),
-            name: account.name + ' (Importado)',
-            limit: 0, // Pluggy as vezes não retorna limite
-            dueDay: 1,
-            closingDay: 1,
-            color: '#000000',
-            brand: 'visa'
-          };
-          // await addCard(newCard); // Descomente se quiser criar cartões automaticamente
+          // Placeholder for handling card import logic if uncommented
         }
 
         const pluggyTransactions = await getTransactions(account.id);
@@ -194,23 +215,14 @@ export const useFinanceData = () => {
         for (const pt of pluggyTransactions) {
           const amount = Math.abs(pt.amount);
           const type = pt.amount < 0 ? 'EXPENSE' : 'INCOME';
-
-          // Mapeamento simples de categoria
           let categoryId = categories[0].id;
           if (pt.category) {
-            // Tentar encontrar categoria pelo nome (muito básico)
             const found = categories.find(c => c.name.toLowerCase() === pt.category.toLowerCase());
             if (found) categoryId = found.id;
           }
 
           const newTx: Transaction = {
-            id: pt.id, // Usando ID do Pluggy temporariamente (pode causar conflito se UUID for esperado)
-            // Melhor gerar um novo ID ou deixar o banco gerar se for insert
-            // Mas aqui estamos passando para addTransaction que espera um objeto Transaction
-            // Vamos deixar vazio ou temp, o addTransaction lida com isso?
-            // addTransaction usa Date.now() no App.tsx, mas aqui estamos chamando a versão do hook.
-            // A versão do hook faz insert no supabase.
-            // Vamos passar um ID temporário.
+            id: pt.id,
             description: pt.description,
             amount: amount,
             type: type as 'EXPENSE' | 'INCOME',
