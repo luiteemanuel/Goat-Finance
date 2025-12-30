@@ -56,9 +56,13 @@ export const useFinanceData = () => {
     setLoading(true);
     try {
       // Transactions
-      const txQuery = query(collection(db, 'transactions'), where('userId', '==', userId), orderBy('date', 'desc'));
+      // Note: orderBy requires a composite index with where clause in Firestore. 
+      // Removed temporarily to ensure data shows up. User can create index via console link if needed later.
+      const txQuery = query(collection(db, 'transactions'), where('userId', '==', userId));
       const txSnapshot = await getDocs(txQuery);
       const txs = txSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
+      // Sort in memory for now
+      txs.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
       // Cards
       const cardQuery = query(collection(db, 'cards'), where('userId', '==', userId));
