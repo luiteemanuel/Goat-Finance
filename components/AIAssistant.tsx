@@ -446,7 +446,7 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ transactions, categories, car
                             <option value="INCOME">Receita</option>
                           </select>
                         </div>
-                        <div className="col-span-2">
+                        <div>
                           <label className="text-xs text-slate-500 block mb-1">Categoria</label>
                           <select
                             value={editingTransaction.category}
@@ -456,6 +456,20 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ transactions, categories, car
                             {categories.map(cat => (
                               <option key={cat.id} value={cat.name}>{cat.name}</option>
                             ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="text-xs text-slate-500 block mb-1">Método de Pagamento</label>
+                          <select
+                            value={editingTransaction.paymentMethod || 'PIX'}
+                            onChange={(e) => setEditingTransaction({ ...editingTransaction, paymentMethod: e.target.value })}
+                            className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                          >
+                            <option value="PIX">PIX</option>
+                            <option value="CREDIT_CARD">Cartão de Crédito</option>
+                            <option value="DEBIT_CARD">Cartão de Débito</option>
+                            <option value="CASH">Dinheiro</option>
+                            <option value="TRANSFER">Transferência</option>
                           </select>
                         </div>
                       </div>
@@ -494,9 +508,16 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ transactions, categories, car
                             {t.type === 'INCOME' ? 'Receita' : 'Despesa'}
                           </span>
                         </div>
-                        <div className="flex items-center gap-3 text-xs text-slate-500 mt-1">
+                        <div className="flex items-center gap-3 text-xs text-slate-500 mt-1 flex-wrap">
                           <span><i className="fa-regular fa-calendar mr-1"></i>{t.date}</span>
                           <span><i className="fa-solid fa-tag mr-1"></i>{t.category}</span>
+                          <span><i className="fa-solid fa-credit-card mr-1"></i>{
+                            t.paymentMethod === 'CREDIT_CARD' ? 'Crédito' :
+                              t.paymentMethod === 'DEBIT_CARD' ? 'Débito' :
+                                t.paymentMethod === 'CASH' ? 'Dinheiro' :
+                                  t.paymentMethod === 'TRANSFER' ? 'Transf.' :
+                                    t.paymentMethod || 'PIX'
+                          }</span>
                           <span className="text-slate-300">•</span>
                           <span className="text-slate-400">{t.confidence}% confiança</span>
                         </div>
