@@ -393,6 +393,47 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ transactions, categories, car
               </div>
             </div>
 
+            {/* Bulk Actions Bar */}
+            <div className="px-6 py-4 bg-slate-50 border-b border-slate-100">
+              <div className="flex flex-wrap items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-slate-600 font-medium">Aplicar para todas:</span>
+                  <select
+                    onChange={(e) => {
+                      const method = e.target.value;
+                      if (method) {
+                        setPendingTransactions(prev => prev.map(t => ({ ...t, paymentMethod: method })));
+                      }
+                    }}
+                    className="px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    defaultValue=""
+                  >
+                    <option value="" disabled>Método de pagamento...</option>
+                    <option value="PIX">PIX</option>
+                    <option value="CREDIT_CARD">Cartão de Crédito</option>
+                    <option value="DEBIT_CARD">Cartão de Débito</option>
+                    <option value="CASH">Dinheiro</option>
+                    <option value="TRANSFER">Transferência</option>
+                  </select>
+                </div>
+                <div className="flex items-center gap-2 ml-auto">
+                  <button
+                    onClick={() => setSelectedTransactions(new Set(pendingTransactions.map((_, i) => i)))}
+                    className="text-xs text-indigo-600 hover:text-indigo-800 font-medium"
+                  >
+                    Selecionar todas
+                  </button>
+                  <span className="text-slate-300">|</span>
+                  <button
+                    onClick={() => setSelectedTransactions(new Set())}
+                    className="text-xs text-slate-500 hover:text-slate-700 font-medium"
+                  >
+                    Desmarcar todas
+                  </button>
+                </div>
+              </div>
+            </div>
+
             {/* Transaction List */}
             <div className="p-6 overflow-y-auto max-h-[50vh] space-y-3">
               {pendingTransactions.map((t, index) => (
