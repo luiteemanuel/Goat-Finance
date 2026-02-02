@@ -6,11 +6,12 @@ interface TransactionsProps {
   categories: Category[];
   cards: CreditCard[];
   onAddTransaction: (t: Transaction) => void;
+  onDeleteTransaction: (transactionId: string) => void;
   selectedMonth: string;
   onMonthChange: (month: string) => void;
 }
 
-const Transactions: React.FC<TransactionsProps> = ({ transactions, categories, cards, onAddTransaction, selectedMonth, onMonthChange }) => {
+const Transactions: React.FC<TransactionsProps> = ({ transactions, categories, cards, onAddTransaction, onDeleteTransaction, selectedMonth, onMonthChange }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [filter, setFilter] = useState('all');
 
@@ -137,6 +138,7 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, categories, c
               <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider hidden md:table-cell">Categoria</th>
               <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider hidden sm:table-cell">Data</th>
               <th className="px-6 py-4 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Valor</th>
+              <th className="px-6 py-4 text-center text-xs font-semibold text-slate-500 uppercase tracking-wider w-16">Ações</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -176,6 +178,19 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, categories, c
                   </td>
                   <td className={`px-6 py-4 text-right font-medium ${t.type === TransactionType.INCOME ? 'text-emerald-600' : 'text-slate-800'}`}>
                     {t.type === TransactionType.INCOME ? '+' : '-'} R$ {t.amount.toFixed(2)}
+                  </td>
+                  <td className="px-6 py-4 text-center">
+                    <button
+                      onClick={() => {
+                        if (confirm('Tem certeza que deseja excluir esta transação?')) {
+                          onDeleteTransaction(t.id);
+                        }
+                      }}
+                      className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                      title="Excluir transação"
+                    >
+                      <i className="fa-solid fa-trash-can"></i>
+                    </button>
                   </td>
                 </tr>
               );

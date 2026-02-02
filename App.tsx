@@ -27,6 +27,7 @@ const App: React.FC = () => {
     cards,
     goals,
     addTransaction,
+    deleteTransaction,
     addGoal,
     addCard,
     syncPluggyData
@@ -56,7 +57,7 @@ const App: React.FC = () => {
       case 'dashboard':
         return <Dashboard transactions={transactions} categories={categories} cards={cards} selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} onSyncPluggy={syncPluggyData} />;
       case 'transactions':
-        return <Transactions transactions={transactions} categories={categories} cards={cards} onAddTransaction={handleAddTransaction} selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} />;
+        return <Transactions transactions={transactions} categories={categories} cards={cards} onAddTransaction={handleAddTransaction} onDeleteTransaction={deleteTransaction} selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} />;
       case 'cards':
         return <CardsView cards={cards} transactions={transactions} onAddCard={addCard} onSyncPluggy={syncPluggyData} />;
       case 'ai':

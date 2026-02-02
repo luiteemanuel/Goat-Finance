@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { getAccounts, getTransactions } from '../services/pluggy';
-import { Transaction, Category, CreditCard, Goal, TransactionStatus, PaymentMethod } from '../types';
+import { Transaction, Category, CreditCard, Goal, TransactionStatus, TransactionType, PaymentMethod } from '../types';
 import { MOCK_CATEGORIES } from '../constants';
 import { auth, db } from '../lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -77,6 +77,8 @@ export const useFinanceData = () => {
       if (txs) {
         setTransactions(txs.map((t: any) => ({
           ...t,
+          // Ensure type is properly mapped to enum value
+          type: t.type === 'INCOME' ? TransactionType.INCOME : TransactionType.EXPENSE,
           categoryId: t.categoryId, // Firestore data should match our types roughly
           cardId: t.cardId,
           paymentMethod: t.paymentMethod,
@@ -172,6 +174,21 @@ export const useFinanceData = () => {
     }
   };
 
+  const deleteTransaction = async (transactionId: string) => {
+    if (!auth.currentUser) return;
+
+    // Optimistic Update
+    setTransactions(prev => prev.filter(t => t.id !== transactionId));
+
+    try {
+      await deleteDoc(doc(db, 'transactions', transactionId));
+    } catch (error) {
+      console.error('Error deleting transaction:', error);
+      // Refetch data on error
+      fetchData(auth.currentUser.uid);
+    }
+  };
+
   const addGoal = async (g: Goal) => {
     if (!auth.currentUser) return;
     setGoals(prev => [...prev, g]);
@@ -258,6 +275,7 @@ export const useFinanceData = () => {
     cards,
     goals,
     addTransaction,
+    deleteTransaction,
     addGoal,
     addCard,
     syncPluggyData,

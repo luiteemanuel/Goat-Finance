@@ -182,11 +182,14 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ transactions, categories, car
 
     pendingTransactions.forEach((t, index) => {
       if (selectedTransactions.has(index)) {
+        // Ensure type is properly converted to TransactionType enum
+        const transactionType = t.type === 'INCOME' ? TransactionType.INCOME : TransactionType.EXPENSE;
+
         onAddTransaction({
           description: t.description,
           amount: t.amount,
           date: t.date,
-          type: t.type as TransactionType,
+          type: transactionType,
           status: TransactionStatus.PAID,
           categoryId: getCategoryId(t.category || ''),
           paymentMethod: getPaymentMethod(t.paymentMethod),
@@ -262,19 +265,19 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ transactions, categories, car
               <div className={`max-w-[80%] ${msg.role === 'user' ? 'order-2' : 'order-1'}`}>
                 <div className={`flex items-end gap-2 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${msg.role === 'user'
-                      ? 'bg-gradient-to-br from-indigo-500 to-purple-600 text-white'
-                      : 'bg-gradient-to-br from-emerald-400 to-cyan-500 text-white'
+                    ? 'bg-gradient-to-br from-indigo-500 to-purple-600 text-white'
+                    : 'bg-gradient-to-br from-emerald-400 to-cyan-500 text-white'
                     }`}>
                     <i className={`fa-solid ${msg.role === 'user' ? 'fa-user' : 'fa-robot'} text-xs`}></i>
                   </div>
                   <div className={`rounded-2xl px-4 py-3 ${msg.role === 'user'
-                      ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-br-md'
-                      : 'bg-slate-100 text-slate-800 rounded-bl-md'
+                    ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-br-md'
+                    : 'bg-slate-100 text-slate-800 rounded-bl-md'
                     }`}>
                     {msg.attachment && (
                       <div className={`flex items-center gap-2 mb-2 text-sm ${msg.role === 'user' ? 'text-white/80' : 'text-slate-500'}`}>
                         <i className={`fa-solid ${msg.attachment.type === 'image' ? 'fa-image' :
-                            msg.attachment.type === 'csv' ? 'fa-file-csv' : 'fa-file-pdf'
+                          msg.attachment.type === 'csv' ? 'fa-file-csv' : 'fa-file-pdf'
                           }`}></i>
                         <span>{msg.attachment.name}</span>
                       </div>
@@ -396,8 +399,8 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ transactions, categories, car
                 <div
                   key={index}
                   className={`border-2 rounded-2xl p-4 transition-all cursor-pointer ${selectedTransactions.has(index)
-                      ? 'border-indigo-500 bg-indigo-50/50'
-                      : 'border-slate-200 bg-slate-50 opacity-60'
+                    ? 'border-indigo-500 bg-indigo-50/50'
+                    : 'border-slate-200 bg-slate-50 opacity-60'
                     }`}
                   onClick={() => toggleTransactionSelection(index)}
                 >
@@ -485,8 +488,8 @@ const AIAssistant: React.FC<AIAssistantProps> = ({ transactions, categories, car
                         <div className="flex items-center gap-2">
                           <span className="font-medium text-slate-800 truncate">{t.description}</span>
                           <span className={`text-xs px-2 py-0.5 rounded-full ${t.type === 'INCOME'
-                              ? 'bg-emerald-100 text-emerald-700'
-                              : 'bg-red-100 text-red-700'
+                            ? 'bg-emerald-100 text-emerald-700'
+                            : 'bg-red-100 text-red-700'
                             }`}>
                             {t.type === 'INCOME' ? 'Receita' : 'Despesa'}
                           </span>
