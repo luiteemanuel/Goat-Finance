@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import BankConnect from './BankConnect';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend } from 'recharts';
 import { Transaction, Category, CreditCard, TransactionType, PaymentMethod, TransactionStatus } from '../types';
+import { getInvoiceCycleFromDate } from '../lib/creditCardBilling';
 
 interface DashboardProps {
   transactions: Transaction[];
@@ -22,10 +23,24 @@ const PAYMENT_COLORS: Record<string, string> = {
 };
 
 const Dashboard: React.FC<DashboardProps> = ({ transactions, categories, cards, selectedMonth, onMonthChange, onSyncPluggy }) => {
+  const cardsById = useMemo(
+    () => new Map(cards.map(card => [card.id, card])),
+    [cards]
+  );
 
   const filteredTransactions = useMemo(() => {
-    return transactions.filter(t => t.date.startsWith(selectedMonth));
-  }, [transactions, selectedMonth]);
+    return transactions.filter(t => {
+      // Credit card expenses are accounted by invoice cycle month, not purchase date month.
+      if (t.type === TransactionType.EXPENSE && t.paymentMethod === PaymentMethod.CREDIT_CARD && t.cardId) {
+        const card = cardsById.get(t.cardId);
+        if (!card) return t.date.startsWith(selectedMonth);
+        const invoiceMonth = (t.invoiceId || getInvoiceCycleFromDate(t.date, card).invoiceId).slice(0, 7);
+        return invoiceMonth === selectedMonth;
+      }
+
+      return t.date.startsWith(selectedMonth);
+    });
+  }, [transactions, selectedMonth, cardsById]);
 
   const handlePrevMonth = () => {
     const [year, month] = selectedMonth.split('-').map(Number);
@@ -59,7 +74,7 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions, categories, cards, 
 
   const categoryData = useMemo(() => {
     const data: Record<string, number> = {};
-    transactions
+    filteredTransactions
       .filter(t => t.type === TransactionType.EXPENSE)
       .forEach(t => {
         const catName = categories.find(c => c.id === t.categoryId)?.name || 'Outros';
@@ -70,7 +85,7 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions, categories, cards, 
 
   const paymentMethodData = useMemo(() => {
     const data: Record<string, number> = {};
-    transactions
+    filteredTransactions
       .filter(t => t.type === TransactionType.EXPENSE)
       .forEach(t => {
         data[t.paymentMethod] = (data[t.paymentMethod] || 0) + t.amount;
@@ -80,7 +95,7 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions, categories, cards, 
 
   const cardData = useMemo(() => {
     const data: Record<string, number> = {};
-    transactions
+    filteredTransactions
       .filter(t => t.cardId)
       .forEach(t => {
         const cardName = cards.find(c => c.id === t.cardId)?.name || 'Desconhecido';
