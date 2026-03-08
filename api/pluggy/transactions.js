@@ -1,4 +1,5 @@
 const PLUGGY_BASE_URL = 'https://api.pluggy.ai';
+const { safeReadJson } = require('./_utils');
 
 module.exports = async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -22,7 +23,7 @@ module.exports = async function handler(req, res) {
       },
     });
 
-    const data = await pluggyResponse.json();
+    const data = await safeReadJson(pluggyResponse);
     return res.status(pluggyResponse.status).json(data);
   } catch (error) {
     return res.status(500).json({ error: 'Pluggy transactions proxy failed', details: String(error) });

@@ -1,16 +1,5 @@
 const PLUGGY_BASE_URL = 'https://api.pluggy.ai';
-
-const readJsonBody = async (req) => {
-  if (!req.body) return {};
-  if (typeof req.body === 'string') {
-    try {
-      return JSON.parse(req.body);
-    } catch {
-      return {};
-    }
-  }
-  return req.body;
-};
+const { normalizeSecret, safeReadBody, safeReadJson } = require('./_utils');
 
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -18,9 +7,13 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const body = await readJsonBody(req);
-    const clientId = body.clientId || process.env.PLUGGY_CLIENT_ID || process.env.VITE_PLUGGY_CLIENT_ID;
-    const clientSecret = body.clientSecret || process.env.PLUGGY_CLIENT_SECRET || process.env.VITE_PLUGGY_CLIENT_SECRET;
+    const body = await safeReadBody(req);
+    const clientId = normalizeSecret(
+      body.clientId || process.env.PLUGGY_CLIENT_ID || process.env.VITE_PLUGGY_CLIENT_ID
+    );
+    const clientSecret = normalizeSecret(
+      body.clientSecret || process.env.PLUGGY_CLIENT_SECRET || process.env.VITE_PLUGGY_CLIENT_SECRET
+    );
 
     if (!clientId || !clientSecret) {
       return res.status(400).json({
@@ -34,7 +27,7 @@ module.exports = async function handler(req, res) {
       body: JSON.stringify({ clientId, clientSecret }),
     });
 
-    const data = await pluggyResponse.json();
+    const data = await safeReadJson(pluggyResponse);
     return res.status(pluggyResponse.status).json(data);
   } catch (error) {
     return res.status(500).json({ error: 'Pluggy auth proxy failed', details: String(error) });
