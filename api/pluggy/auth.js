@@ -28,7 +28,7 @@ const safeReadJson = async (response) => {
   }
 };
 
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -59,4 +59,4 @@ module.exports = async function handler(req, res) {
   } catch (error) {
     return res.status(500).json({ error: 'Pluggy auth proxy failed', details: String(error) });
   }
-};
+}
