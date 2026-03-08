@@ -10,14 +10,17 @@ interface BankConnectProps {
 const BankConnect: React.FC<BankConnectProps> = ({ onSuccess, onError }) => {
     const [connectToken, setConnectToken] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
+    const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
     useEffect(() => {
         const fetchToken = async () => {
             try {
+                setErrorMessage(null);
                 const token = await getConnectToken();
                 setConnectToken(token);
             } catch (error) {
                 console.error("Failed to get connect token", error);
+                setErrorMessage(error instanceof Error ? error.message : 'Falha desconhecida ao criar connect token.');
             } finally {
                 setLoading(false);
             }
@@ -39,7 +42,7 @@ const BankConnect: React.FC<BankConnectProps> = ({ onSuccess, onError }) => {
     if (!connectToken) {
         return (
             <div className="text-red-500 text-sm">
-                Erro ao conectar com Pluggy. Verifique suas credenciais.
+                Erro ao conectar com Pluggy. {errorMessage || 'Verifique suas credenciais e os endpoints /api/pluggy.'}
             </div>
         );
     }

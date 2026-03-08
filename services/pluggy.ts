@@ -7,53 +7,32 @@ const BASE_URL = '/api/pluggy';
 // O ideal é ter um backend que gera o 'connectToken' e o envia para o frontend.
 // Como estamos em um ambiente local/pessoal, faremos isso aqui para simplificar.
 
-// Internal helper to get connect token directly (not exported)
-const fetchConnectToken = async () => {
-    try {
-        const response = await fetch(`${BASE_URL}/auth`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                clientId: CLIENT_ID,
-                clientSecret: CLIENT_SECRET,
-            }),
-        });
-
-        if (!response.ok) {
-            throw new Error(`Failed to get connect token: ${response.statusText}`);
-        }
-
-        const data = await response.json();
-        return data.accessToken;
-    } catch (error) {
-        console.error("Erro ao criar connect token:", error);
-        throw error;
-    }
-};
-
 // Helper to get API Key first (needed for other calls)
 let cachedApiKey: string | null = null;
 const getApiKey = async () => {
     if (cachedApiKey) return cachedApiKey;
+
+    const credentials = CLIENT_ID && CLIENT_SECRET
+        ? { clientId: CLIENT_ID, clientSecret: CLIENT_SECRET }
+        : {};
 
     const response = await fetch(`${BASE_URL}/auth`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-            clientId: CLIENT_ID,
-            clientSecret: CLIENT_SECRET,
-        }),
+        body: JSON.stringify(credentials),
     });
 
     if (!response.ok) {
-        throw new Error(`Failed to authenticate: ${response.statusText}`);
+        const errorText = await response.text();
+        throw new Error(`Failed to authenticate Pluggy (${response.status}). ${errorText || response.statusText}`);
     }
 
     const data = await response.json();
+    if (!data?.apiKey) {
+        throw new Error('Pluggy authentication succeeded but apiKey is missing in response.');
+    }
     cachedApiKey = data.apiKey;
     return data.apiKey;
 };
@@ -72,10 +51,14 @@ export const createConnectToken = async () => {
         });
 
         if (!response.ok) {
-            throw new Error(`Failed to create connect token: ${response.statusText}`);
+            const errorText = await response.text();
+            throw new Error(`Failed to create connect token (${response.status}). ${errorText || response.statusText}`);
         }
 
         const data = await response.json();
+        if (!data?.accessToken) {
+            throw new Error('Connect token response does not contain accessToken.');
+        }
         return data.accessToken;
     } catch (error) {
         console.error("Erro ao criar connect token:", error);
@@ -97,7 +80,8 @@ export const getAccounts = async (itemId: string) => {
         });
 
         if (!response.ok) {
-            throw new Error(`Failed to fetch accounts: ${response.statusText}`);
+            const errorText = await response.text();
+            throw new Error(`Failed to fetch accounts (${response.status}). ${errorText || response.statusText}`);
         }
 
         const data = await response.json();
@@ -120,7 +104,8 @@ export const getTransactions = async (accountId: string) => {
         });
 
         if (!response.ok) {
-            throw new Error(`Failed to fetch transactions: ${response.statusText}`);
+            const errorText = await response.text();
+            throw new Error(`Failed to fetch transactions (${response.status}). ${errorText || response.statusText}`);
         }
 
         const data = await response.json();
