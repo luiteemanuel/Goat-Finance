@@ -1,5 +1,15 @@
 const PLUGGY_BASE_URL = 'https://api.pluggy.ai';
-const { safeReadJson } = require('./_utils');
+
+const safeReadJson = async (response) => {
+  const text = await response.text();
+  if (!text) return {};
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { message: text };
+  }
+};
 
 module.exports = async function handler(req, res) {
   if (req.method !== 'GET') {
