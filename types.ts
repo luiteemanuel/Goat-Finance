@@ -32,10 +32,13 @@ export interface CreditCard {
   dueDay: number;
   color: string;
   brand: 'visa' | 'mastercard' | 'amex' | 'other';
+  externalAccountId?: string;
+  accountScope?: 'PF' | 'PJ';
 }
 
 export interface Transaction {
   id: string;
+  externalId?: string; // Source ID from bank/Open Finance provider to prevent duplicate imports
   description: string;
   amount: number;
   date: string; // ISO String YYYY-MM-DD
@@ -49,6 +52,9 @@ export interface Transaction {
     total: number;
     originalTotalAmount?: number;
   };
+  accountScope?: 'PF' | 'PJ';
+  invoiceId?: string; // Credit card statement cycle ID (YYYY-MM of statement closing month)
+  invoiceDueDate?: string; // ISO date when the statement is due
   isFixed: boolean; // Recurrent (Rent, Netflix)
   tag?: string;
 }

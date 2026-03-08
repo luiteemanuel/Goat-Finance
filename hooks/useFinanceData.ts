@@ -4,6 +4,7 @@ import { getAccounts, getTransactions } from '../services/pluggy';
 import { Transaction, Category, CreditCard, Goal, TransactionStatus, TransactionType, PaymentMethod } from '../types';
 import { MOCK_CATEGORIES } from '../constants';
 import { auth, db } from '../lib/firebase';
+import { getInvoiceCycleFromDate } from '../lib/creditCardBilling';
 import { onAuthStateChanged } from 'firebase/auth';
 import {
   collection,
@@ -11,7 +12,6 @@ import {
   addDoc,
   query,
   where,
-  orderBy,
   deleteDoc,
   doc,
   Timestamp
@@ -81,6 +81,10 @@ export const useFinanceData = () => {
           type: t.type === 'INCOME' ? TransactionType.INCOME : TransactionType.EXPENSE,
           categoryId: t.categoryId, // Firestore data should match our types roughly
           cardId: t.cardId,
+          externalId: t.externalId,
+          accountScope: t.accountScope,
+          invoiceId: t.invoiceId,
+          invoiceDueDate: t.invoiceDueDate,
           paymentMethod: t.paymentMethod,
           isFixed: t.isFixed || false
         })));
@@ -92,7 +96,9 @@ export const useFinanceData = () => {
           limit: c.limit,
           dueDay: c.dueDay,
           closingDay: c.closingDay,
-          brand: 'visa'
+          externalAccountId: c.externalAccountId,
+          accountScope: c.accountScope,
+          brand: c.brand || 'visa'
         })));
       }
 
@@ -160,6 +166,12 @@ export const useFinanceData = () => {
         categoryId: t.categoryId,
         date: t.date,
         paymentMethod: t.paymentMethod,
+        cardId: t.cardId || null,
+        externalId: t.externalId || null,
+        accountScope: t.accountScope || null,
+        invoiceId: t.invoiceId || null,
+        invoiceDueDate: t.invoiceDueDate || null,
+        tag: t.tag || null,
         isFixed: t.isFixed || false,
         status: t.status,
         userId: auth.currentUser.uid,
@@ -203,7 +215,7 @@ export const useFinanceData = () => {
   };
 
   const addCard = async (c: CreditCard) => {
-    if (!auth.currentUser) return;
+    if (!auth.currentUser) return null;
     setCards(prev => [...prev, c]);
 
     try {
@@ -213,54 +225,127 @@ export const useFinanceData = () => {
         color: c.color,
         dueDay: c.dueDay,
         closingDay: c.closingDay,
+        brand: c.brand || 'visa',
+        externalAccountId: c.externalAccountId || null,
+        accountScope: c.accountScope || null,
         userId: auth.currentUser.uid
       });
-      setCards(prev => prev.map(item => item.id === c.id ? { ...item, id: docRef.id } : item));
+      const persistedCard = { ...c, id: docRef.id };
+      setCards(prev => prev.map(item => item.id === c.id ? persistedCard : item));
+      return persistedCard;
     } catch (error) {
       console.error('Error adding card:', error);
+      return null;
     }
   };
 
   const syncPluggyData = async (itemId: string) => {
     try {
       const accounts = await getAccounts(itemId);
-      let newTransactionsCount = 0;
+      let importedCount = 0;
+      let skippedCount = 0;
+      let linkedCardsCount = 0;
+      const existingExternalIds = new Set(
+        transactions.map(t => t.externalId).filter((id): id is string => Boolean(id))
+      );
+      const cardsByExternalAccountId = new Map(
+        cards
+          .filter(card => card.externalAccountId)
+          .map(card => [card.externalAccountId as string, card])
+      );
+      const cardsByName = new Map(cards.map(card => [card.name.toLowerCase(), card]));
+
+      const inferScope = (account: any): 'PF' | 'PJ' => {
+        const document = String(
+          account?.taxNumber ||
+          account?.owner?.taxNumber ||
+          account?.owner?.documentNumber ||
+          ''
+        ).replace(/\D/g, '');
+        if (document.length >= 12) return 'PJ';
+        return 'PF';
+      };
+
+      const inferBillingDays = (account: any) => {
+        const dueDayRaw = Number(account?.creditData?.dueDay || account?.dueDay);
+        const closingDayRaw = Number(account?.creditData?.closingDay || account?.closingDay);
+        const dueDay = Number.isInteger(dueDayRaw) && dueDayRaw >= 1 && dueDayRaw <= 31 ? dueDayRaw : 10;
+        const closingDay = Number.isInteger(closingDayRaw) && closingDayRaw >= 1 && closingDayRaw <= 31 ? closingDayRaw : 26;
+        return { dueDay, closingDay };
+      };
 
       for (const account of accounts) {
-        if (account.type === 'CREDIT' || account.subtype === 'CREDIT_CARD') {
-          // Placeholder for handling card import logic if uncommented
+        const accountScope = inferScope(account);
+        const isCreditAccount = account.type === 'CREDIT' || account.subtype === 'CREDIT_CARD';
+        let matchedCard = isCreditAccount
+          ? cardsByExternalAccountId.get(account.id) || cardsByName.get((account.name || '').toLowerCase())
+          : undefined;
+
+        if (isCreditAccount && !matchedCard) {
+          const { dueDay, closingDay } = inferBillingDays(account);
+          const createdCard = await addCard({
+            id: `temp-card-${account.id}`,
+            name: account.name || 'Cartao Open Finance',
+            limit: Number(account?.creditData?.limit || account?.balance || 0),
+            dueDay,
+            closingDay,
+            color: '#1e293b',
+            brand: 'visa',
+            externalAccountId: account.id,
+            accountScope
+          });
+          if (createdCard) {
+            matchedCard = createdCard;
+            cardsByExternalAccountId.set(account.id, createdCard);
+            cardsByName.set(createdCard.name.toLowerCase(), createdCard);
+            linkedCardsCount++;
+          }
         }
 
         const pluggyTransactions = await getTransactions(account.id);
-
         for (const pt of pluggyTransactions) {
+          const externalId = `pluggy:${pt.id}`;
+          if (existingExternalIds.has(externalId)) {
+            skippedCount++;
+            continue;
+          }
           const amount = Math.abs(pt.amount);
-          const type = pt.amount < 0 ? 'EXPENSE' : 'INCOME';
+          const type = pt.amount < 0 ? TransactionType.EXPENSE : TransactionType.INCOME;
           let categoryId = categories[0].id;
           if (pt.category) {
-            const found = categories.find(c => c.name.toLowerCase() === pt.category.toLowerCase());
+            const found = categories.find(c => c.name.toLowerCase() === String(pt.category).toLowerCase());
             if (found) categoryId = found.id;
           }
-
+          const paymentMethod = isCreditAccount ? PaymentMethod.CREDIT_CARD : PaymentMethod.DEBIT_CARD;
+          const txDate = String(pt.date).slice(0, 10);
+          const invoiceCycle = matchedCard && paymentMethod === PaymentMethod.CREDIT_CARD
+            ? getInvoiceCycleFromDate(txDate, matchedCard)
+            : null;
           const newTx: Transaction = {
-            id: pt.id,
-            description: pt.description,
+            id: `pluggy-${pt.id}`,
+            externalId,
+            description: pt.description || account.name || 'Transacao Open Finance',
             amount: amount,
-            type: type as 'EXPENSE' | 'INCOME',
-            date: new Date(pt.date).toISOString().split('T')[0],
+            type,
+            date: txDate,
             categoryId: categoryId,
-            paymentMethod: account.type === 'CREDIT' ? PaymentMethod.CREDIT_CARD : PaymentMethod.DEBIT_CARD,
+            paymentMethod,
+            cardId: paymentMethod === PaymentMethod.CREDIT_CARD ? matchedCard?.id : undefined,
+            accountScope,
+            invoiceId: invoiceCycle?.invoiceId,
+            invoiceDueDate: invoiceCycle?.dueDate,
+            tag: `${accountScope}:${account.name || 'Conta'}`,
             status: TransactionStatus.PAID,
             isFixed: false
-          } as Transaction;
-
+          };
           await addTransaction(newTx);
-          newTransactionsCount++;
+          existingExternalIds.add(externalId);
+          importedCount++;
         }
       }
-      alert(`Sincronização concluída! ${newTransactionsCount} transações importadas.`);
+      alert(`Sincronizacao concluida. ${importedCount} novas transacoes, ${skippedCount} ignoradas (ja existiam) e ${linkedCardsCount} cartoes vinculados automaticamente.`);
     } catch (error) {
-      console.error("Sync error", error);
+      console.error('Sync error', error);
       alert('Erro ao sincronizar dados com Pluggy.');
     }
   };
