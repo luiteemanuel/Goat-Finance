@@ -95,21 +95,45 @@ export const getAccounts = async (itemId: string) => {
 export const getTransactions = async (accountId: string) => {
     try {
         const apiKey = await getApiKey();
-        // Busca transações dos últimos 30 dias por padrão (API default or specify params)
-        const response = await fetch(`${BASE_URL}/transactions?accountId=${accountId}`, {
-            method: 'GET',
-            headers: {
-                'X-API-KEY': apiKey,
-            },
-        });
+        const now = new Date();
+        const fromDate = new Date(now);
+        fromDate.setMonth(fromDate.getMonth() - 6);
+        const from = fromDate.toISOString().slice(0, 10);
+        const to = now.toISOString().slice(0, 10);
 
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`Failed to fetch transactions (${response.status}). ${errorText || response.statusText}`);
+        let page = 1;
+        let totalPages = 1;
+        const allTransactions: any[] = [];
+
+        while (page <= totalPages) {
+            const query = new URLSearchParams({
+                accountId,
+                from,
+                to,
+                page: String(page),
+                pageSize: '500',
+            });
+
+            const response = await fetch(`${BASE_URL}/transactions?${query.toString()}`, {
+                method: 'GET',
+                headers: {
+                    'X-API-KEY': apiKey,
+                },
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Failed to fetch transactions (${response.status}). ${errorText || response.statusText}`);
+            }
+
+            const data = await response.json();
+            const results = Array.isArray(data?.results) ? data.results : [];
+            allTransactions.push(...results);
+            totalPages = Number(data?.totalPages || 1);
+            page += 1;
         }
 
-        const data = await response.json();
-        return data.results;
+        return allTransactions;
     } catch (error) {
         console.error("Erro ao buscar transações:", error);
         throw error;

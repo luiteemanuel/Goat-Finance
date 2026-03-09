@@ -254,6 +254,40 @@ export const useFinanceData = () => {
           .map(card => [card.externalAccountId as string, card])
       );
       const cardsByName = new Map(cards.map(card => [card.name.toLowerCase(), card]));
+      const normalizeText = (value: any) =>
+        String(value || '')
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .toLowerCase();
+      const findCategoryId = (pt: any) => {
+        const fallbackId = categories[0]?.id;
+        if (!fallbackId) return '';
+
+        const source = normalizeText(
+          `${pt?.category || ''} ${pt?.personalFinanceCategory || ''} ${pt?.description || ''}`
+        );
+
+        const byExactName = categories.find(c => normalizeText(c.name) === normalizeText(pt?.category));
+        if (byExactName) return byExactName.id;
+
+        const keywordMap: Array<{ keywords: string[]; target: string }> = [
+          { target: 'Alimentação', keywords: ['mercado', 'supermercado', 'food', 'meal', 'restaurante', 'ifood'] },
+          { target: 'Transporte', keywords: ['uber', '99', 'taxi', 'combustivel', 'gasolina', 'transporte', 'posto'] },
+          { target: 'Moradia', keywords: ['aluguel', 'rent', 'condominio', 'energia', 'luz', 'agua', 'moradia'] },
+          { target: 'Saúde', keywords: ['farmacia', 'saude', 'health', 'hospital', 'medic'] },
+          { target: 'Lazer', keywords: ['cinema', 'lazer', 'streaming', 'spotify', 'show', 'entertainment'] },
+          { target: 'Serviços/Assinaturas', keywords: ['assinatura', 'subscription', 'servico', 'service', 'internet', 'telefone'] },
+        ];
+
+        for (const rule of keywordMap) {
+          if (rule.keywords.some(keyword => source.includes(keyword))) {
+            const found = categories.find(c => normalizeText(c.name) === normalizeText(rule.target));
+            if (found) return found.id;
+          }
+        }
+
+        return fallbackId;
+      };
 
       const inferScope = (account: any): 'PF' | 'PJ' => {
         const document = String(
@@ -304,6 +338,16 @@ export const useFinanceData = () => {
 
         const pluggyTransactions = await getTransactions(account.id);
         for (const pt of pluggyTransactions) {
+          const normalizedDescription = normalizeText(pt.description);
+          const isCardBillPayment =
+            !isCreditAccount &&
+            normalizedDescription.includes('fatura') &&
+            (normalizedDescription.includes('cartao') || normalizedDescription.includes('credito'));
+          if (isCardBillPayment) {
+            skippedCount++;
+            continue;
+          }
+
           const externalId = `pluggy:${pt.id}`;
           if (existingExternalIds.has(externalId)) {
             skippedCount++;
@@ -322,11 +366,7 @@ export const useFinanceData = () => {
                 ? (Number(pt.amount) >= 0 ? TransactionType.EXPENSE : TransactionType.INCOME)
                 // Deposit accounts usually follow negative=expense, positive=income.
                 : (Number(pt.amount) < 0 ? TransactionType.EXPENSE : TransactionType.INCOME);
-          let categoryId = categories[0].id;
-          if (pt.category) {
-            const found = categories.find(c => c.name.toLowerCase() === String(pt.category).toLowerCase());
-            if (found) categoryId = found.id;
-          }
+          const categoryId = findCategoryId(pt);
           const paymentMethod = isCreditAccount ? PaymentMethod.CREDIT_CARD : PaymentMethod.DEBIT_CARD;
           const txDate = String(pt.date).slice(0, 10);
           const invoiceCycle = matchedCard && paymentMethod === PaymentMethod.CREDIT_CARD

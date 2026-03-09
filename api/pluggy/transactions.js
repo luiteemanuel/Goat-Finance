@@ -27,7 +27,17 @@ export default async function handler(req, res) {
   }
 
   try {
-    const pluggyResponse = await fetch(`${PLUGGY_BASE_URL}/transactions?accountId=${encodeURIComponent(accountId)}`, {
+    const queryParams = new URLSearchParams();
+    Object.entries(req.query || {}).forEach(([key, value]) => {
+      if (Array.isArray(value)) {
+        value.forEach(v => queryParams.append(key, String(v)));
+      } else if (value !== undefined && value !== null) {
+        queryParams.append(key, String(value));
+      }
+    });
+
+    const queryString = queryParams.toString();
+    const pluggyResponse = await fetch(`${PLUGGY_BASE_URL}/transactions?${queryString}`, {
       headers: {
         'X-API-KEY': apiKey,
       },
