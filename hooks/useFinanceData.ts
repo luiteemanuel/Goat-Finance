@@ -309,8 +309,19 @@ export const useFinanceData = () => {
             skippedCount++;
             continue;
           }
-          const amount = Math.abs(pt.amount);
-          const type = pt.amount < 0 ? TransactionType.EXPENSE : TransactionType.INCOME;
+          const amount = Math.abs(Number(pt.amount) || 0);
+          const rawDirection = String(
+            pt.type || pt.transactionType || pt.creditDebitType || ''
+          ).toUpperCase();
+          const type = rawDirection === 'DEBIT'
+            ? TransactionType.EXPENSE
+            : rawDirection === 'CREDIT'
+              ? TransactionType.INCOME
+              : isCreditAccount
+                // Credit card providers often return purchases as positive values.
+                ? (Number(pt.amount) >= 0 ? TransactionType.EXPENSE : TransactionType.INCOME)
+                // Deposit accounts usually follow negative=expense, positive=income.
+                : (Number(pt.amount) < 0 ? TransactionType.EXPENSE : TransactionType.INCOME);
           let categoryId = categories[0].id;
           if (pt.category) {
             const found = categories.find(c => c.name.toLowerCase() === String(pt.category).toLowerCase());
