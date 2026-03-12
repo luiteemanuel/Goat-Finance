@@ -37,6 +37,10 @@ const BankConnect: React.FC<BankConnectProps> = ({ onSuccess, onError }) => {
         setPendingSyncData(null);
     };
 
+    const handleCancelConnect = () => {
+        setConnectToken(null);
+    };
+
     if (loading) {
         return (
             <button disabled className="px-4 py-2 bg-slate-200 text-slate-500 rounded-lg cursor-not-allowed flex items-center gap-2">
@@ -93,18 +97,37 @@ const BankConnect: React.FC<BankConnectProps> = ({ onSuccess, onError }) => {
     }
 
     return (
-        <PluggyConnect
-            connectToken={connectToken}
-            onSuccess={(data) => {
-                setConnectToken(null);
-                setPendingSyncData(data);
-            }}
-            onError={(error) => {
-                console.error("Pluggy Widget Error:", error);
-                setConnectToken(null);
-                if (onError) onError(error);
-            }}
-        />
+        <div className="max-w-md rounded-xl border border-slate-200 bg-white p-4 shadow-sm text-left">
+            <p className="text-sm font-semibold text-slate-800">Abrir Pluggy Connect</p>
+            <p className="mt-2 text-sm text-slate-600">
+                O token foi gerado. Abra o widget abaixo para escolher a instituicao e autorizar o acesso.
+            </p>
+            <p className="mt-2 text-xs text-slate-500">
+                Como sua conta esta em sandbox, o conector de teste Pluggy Bank fica habilitado.
+            </p>
+            <div className="mt-4 flex items-center justify-between gap-3">
+                <PluggyConnect
+                    connectToken={connectToken}
+                    includeSandbox={true}
+                    onClose={handleCancelConnect}
+                    onSuccess={(data) => {
+                        setConnectToken(null);
+                        setPendingSyncData(data);
+                    }}
+                    onError={(error) => {
+                        console.error("Pluggy Widget Error:", error);
+                        setConnectToken(null);
+                        if (onError) onError(error);
+                    }}
+                />
+                <button
+                    onClick={handleCancelConnect}
+                    className="px-3 py-2 rounded-lg text-sm font-medium border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors"
+                >
+                    Cancelar
+                </button>
+            </div>
+        </div>
     );
 };
 
