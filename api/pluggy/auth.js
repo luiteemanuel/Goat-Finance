@@ -36,10 +36,10 @@ export default async function handler(req, res) {
   try {
     const body = await safeReadBody(req);
     const clientId = normalizeSecret(
-      body.clientId || process.env.PLUGGY_CLIENT_ID || process.env.VITE_PLUGGY_CLIENT_ID
+      body.clientId || body.client_id || process.env.PLUGGY_CLIENT_ID || process.env.VITE_PLUGGY_CLIENT_ID
     );
     const clientSecret = normalizeSecret(
-      body.clientSecret || process.env.PLUGGY_CLIENT_SECRET || process.env.VITE_PLUGGY_CLIENT_SECRET
+      body.clientSecret || body.client_secret || process.env.PLUGGY_CLIENT_SECRET || process.env.VITE_PLUGGY_CLIENT_SECRET
     );
 
     if (!clientId || !clientSecret) {
@@ -51,7 +51,12 @@ export default async function handler(req, res) {
     const pluggyResponse = await fetch(`${PLUGGY_BASE_URL}/auth`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ clientId, clientSecret }),
+      body: JSON.stringify({
+        clientId,
+        clientSecret,
+        client_id: clientId,
+        client_secret: clientSecret,
+      }),
     });
 
     const data = await safeReadJson(pluggyResponse);
