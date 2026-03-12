@@ -14,7 +14,8 @@ import {
   where,
   deleteDoc,
   doc,
-  Timestamp
+  Timestamp,
+  updateDoc
 } from 'firebase/firestore';
 
 export interface UserProfile {
@@ -239,6 +240,22 @@ export const useFinanceData = () => {
     }
   };
 
+  const syncCardMetadata = async (cardId: string, updates: Partial<CreditCard>) => {
+    setCards(prev => prev.map(card => card.id === cardId ? { ...card, ...updates } : card));
+
+    if (!auth.currentUser) return;
+
+    try {
+      const payload = Object.fromEntries(
+        Object.entries(updates).filter(([, value]) => value !== undefined)
+      );
+      if (Object.keys(payload).length === 0) return;
+      await updateDoc(doc(db, 'cards', cardId), payload);
+    } catch (error) {
+      console.error('Error updating card metadata:', error);
+    }
+  };
+
   const syncPluggyData = async (itemId: string) => {
     try {
       const accounts = await getAccounts(itemId);
@@ -301,8 +318,30 @@ export const useFinanceData = () => {
       };
 
       const inferBillingDays = (account: any) => {
-        const dueDayRaw = Number(account?.creditData?.dueDay || account?.dueDay);
-        const closingDayRaw = Number(account?.creditData?.closingDay || account?.closingDay);
+        const firstValidDay = (...values: any[]) => {
+          for (const value of values) {
+            const parsed = Number(value);
+            if (Number.isInteger(parsed) && parsed >= 1 && parsed <= 31) {
+              return parsed;
+            }
+          }
+          return undefined;
+        };
+
+        const dueDayRaw = firstValidDay(
+          account?.creditData?.dueDay,
+          account?.creditData?.paymentDay,
+          account?.creditData?.paymentDueDay,
+          account?.dueDay,
+          account?.paymentDay
+        );
+        const closingDayRaw = firstValidDay(
+          account?.creditData?.closingDay,
+          account?.creditData?.closeDay,
+          account?.creditData?.bestPurchaseDay,
+          account?.closingDay,
+          account?.closeDay
+        );
         const dueDay = Number.isInteger(dueDayRaw) && dueDayRaw >= 1 && dueDayRaw <= 31 ? dueDayRaw : 10;
         const closingDay = Number.isInteger(closingDayRaw) && closingDayRaw >= 1 && closingDayRaw <= 31 ? closingDayRaw : 26;
         return { dueDay, closingDay };
@@ -314,6 +353,28 @@ export const useFinanceData = () => {
         let matchedCard = isCreditAccount
           ? cardsByExternalAccountId.get(account.id) || cardsByName.get((account.name || '').toLowerCase())
           : undefined;
+
+        if (isCreditAccount && matchedCard) {
+          const { dueDay, closingDay } = inferBillingDays(account);
+          const nextCardState: CreditCard = {
+            ...matchedCard,
+            externalAccountId: matchedCard.externalAccountId || account.id,
+            dueDay: dueDay || matchedCard.dueDay,
+            closingDay: closingDay || matchedCard.closingDay,
+            accountScope: accountScope || matchedCard.accountScope
+          };
+
+          matchedCard = nextCardState;
+          cardsByExternalAccountId.set(account.id, nextCardState);
+          cardsByName.set(nextCardState.name.toLowerCase(), nextCardState);
+
+          await syncCardMetadata(nextCardState.id, {
+            externalAccountId: nextCardState.externalAccountId,
+            dueDay: nextCardState.dueDay,
+            closingDay: nextCardState.closingDay,
+            accountScope: nextCardState.accountScope
+          });
+        }
 
         if (isCreditAccount && !matchedCard) {
           const { dueDay, closingDay } = inferBillingDays(account);
@@ -357,6 +418,7 @@ export const useFinanceData = () => {
           const rawDirection = String(
             pt.type || pt.transactionType || pt.creditDebitType || ''
           ).toUpperCase();
+          const rawStatus = String(pt.status || pt.paymentStatus || '').toUpperCase();
           const type = rawDirection === 'DEBIT'
             ? TransactionType.EXPENSE
             : rawDirection === 'CREDIT'
@@ -386,7 +448,9 @@ export const useFinanceData = () => {
             invoiceId: invoiceCycle?.invoiceId,
             invoiceDueDate: invoiceCycle?.dueDate,
             tag: `${accountScope}:${account.name || 'Conta'}`,
-            status: TransactionStatus.PAID,
+            status: rawStatus.includes('PEND')
+              ? TransactionStatus.PENDING
+              : TransactionStatus.PAID,
             isFixed: false
           };
           await addTransaction(newTx);
